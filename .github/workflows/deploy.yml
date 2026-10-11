@@ -1,0 +1,40 @@
+name: Publish to ALL-INKL
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Nach Freigabe exakt games.computersys.de eingeben'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: allinkl-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'games.computersys.de'
+    runs-on: ubuntu-latest
+    environment: allinkl
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Test, build and check
+        run: |
+          node --test tests/*.test.js
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          node scripts/build.js
+          node scripts/check.js
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-games-${{ github.sha }}-${{ github.run_id }}
+          path: dist/index.html
+          retention-days: 90
+      - name: Publish via explicit FTPS and verify HTTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: ${{ vars.FTP_REMOTE_DIR }}
+        run: python3 scripts/deploy.py

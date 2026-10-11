@@ -1,0 +1,7 @@
+(function(root){
+  root.Arcade = { games: {}, catalog: [
+    { id:'neon-breakout', title:'Neon Breakout', category:'Arcade', color:'#74f7d0', label:'REFLEXE & HIGHscores', description:'Ein Paddle. Ein Ball. Jede Menge Neon. Räume alle Blöcke ab und knacke deinen Bestwert.', instructions:'Bewege das Paddle nach links und rechts. Räume alle 40 Blöcke ab. Du hast drei Leben; ein verlorener Ball wird automatisch neu gestartet.', controls:'breakout', scoreLabel:'PUNKTE', bestLabel:'BESTWERT' },
+    { id:'memory-quest', title:'Memory Quest', category:'Denkspiele', color:'#e8a6ff', label:'FIND YOUR MATCH', description:'Pixel für Pixel zum perfekten Paar. Entdecke die Symbole und finde alle acht Paare.', instructions:'Decke zwei Karten auf. Gleiche Symbole bleiben sichtbar. Finde alle acht Paare mit möglichst wenigen Zügen. Der Bestwert zählt nur abgeschlossene Runden.', controls:'memory', scoreLabel:'ZÜGE', bestLabel:'BESTE RUNDE' },
+    { id:'pixel-runner', title:'Pixel Runner', category:'Jump ’n’ Run', color:'#ffdf77', label:'SMALL HERO. BIG JUMPS.', description:'Spring über Abgründe, sammle Sterne und erreiche das Portal in einer kleinen Pixelwelt.', instructions:'Laufe und springe bis zum Portal ganz rechts. Sammle die sieben Sterne und meide Abgründe und Stacheln. Nach einem Fehlversuch startest du am Anfang; gesammelte Sterne bleiben erhalten.', controls:'runner', scoreLabel:'STERNE', bestLabel:'BESTWERT' }
+  ]};
+})(globalThis);
