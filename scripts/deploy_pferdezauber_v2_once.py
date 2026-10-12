@@ -22,7 +22,7 @@ def release():
     if not page.is_file():
         raise ValueError("Build missing.")
     html = page.read_bytes()
-    if html.count(b"<body>") != 1 or b'data-horse="friesian"' not in html or b'data-horse="foal-black"' not in html:
+    if html.count(b"<body>") != 1 or b"id:'friesian'" not in html or b"id:'foal-black'" not in html or b"horseCards" not in html:
         raise ValueError("Missing breed selector or unexpected build.")
     html = html.replace(b"<body>", b'<body><script>if(!location.hash)location.hash="spiel/pferdezauber";</script>', 1)
     html = html.replace(b"<head>", b'<head><meta name="robots" content="noindex,nofollow">', 1)
