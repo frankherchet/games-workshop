@@ -6,6 +6,8 @@ Märchenhaftes Gartenspiel in Pixelgrafik aus der Vogelperspektive. Tagsüber Pf
 
 Die Gärten haben jeweils ein eigenes Terrain: Bauerngarten mit Apfelbäumen, Waldgarten mit Pilzen und Schlossgarten mit Steinwegen und alten Mauern. Am Tag warme Farben und Schmetterlinge; nachts kaltes Licht, wandernder Nebel, Laternen und leuchtende Schneckenaugen. Menüs und Anzeigen verwenden Holz und Papier. Es gibt in dieser Version keine Audioeffekte.
 
+Die überarbeitete Grafik ergänzt mehrere Farbstufen, gerundete Pixel-Baumkronen, windbewegte Blätter, unterschiedlich geformte Blüten, Gras- und Bodentexturen, Holzmaserung, Saatkörbe und Wasserringe. Figuren bewegen Beine und Arme beim Laufen; der Fuchsschwanz schwingt mit. Schnecken kriechen mit beweglichen Fühlern und haben eigene Panzer- und Vielfraß-Designs. Gießen und Hackenschläge erhalten Werkzeuganimationen. Laternen und seltene Blumen leuchten nachts, Nebel zieht weich durch die Szene. Bei reduzierter Bewegung im Betriebssystem werden die dekorativen Animationen angehalten. Der statische Boden wird pro Garten zwischengespeichert, um die Renderarbeit zu reduzieren.
+
 ## Gärten, Schwierigkeit und Speicherung
 
 | Garten | Freischaltung | Start |
