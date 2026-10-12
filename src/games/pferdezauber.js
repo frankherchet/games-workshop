@@ -313,34 +313,41 @@
     gl.bindBuffer(gl.ARRAY_BUFFER,staticBuffer);
     gl.bufferData(gl.ARRAY_BUFFER,ground,gl.STATIC_DRAW);
 
-    function local(p,lx,y,lz){const co=Math.cos(p.heading),si=Math.sin(p.heading);return [p.x+lx*co+lz*si,y,p.z+lz*co-lx*si];}
+    function local(p,lx,y,lz){
+      const co=Math.cos(p.heading),si=Math.sin(p.heading),scale=p.horseScale||1;
+      return [p.x+(lx*co+lz*si)*scale,y*scale,p.z+(lz*co-lx*si)*scale];
+    }
     function limb(m,p,lx,y,lz,w,h,d,c) {
-      const v=local(p,lx,y,lz);box(m,v[0],v[1],v[2],w,h,d,c,p.heading);
+      const v=local(p,lx,y,lz),scale=p.horseScale||1;
+      box(m,v[0],v[1],v[2],w*scale,h*scale,d*scale,c,p.heading);
     }
     function blob(m,p,lx,y,lz,rx,ry,rz,c) {
-      const v=local(p,lx,y,lz);ellipsoid(m,v[0],v[1],v[2],rx,ry,rz,c,p.heading);
+      const v=local(p,lx,y,lz),scale=p.horseScale||1;
+      ellipsoid(m,v[0],v[1],v[2],rx*scale,ry*scale,rz*scale,c,p.heading);
     }
     function horse(m,p,t,isCompanion) {
-      const foal=false,scale=1,fur=isCompanion?[.74,.49,.32]:[.82,.71,.56];
+      const breed=horseById(p.horseId);
+      const fur=breed.coat;
       const bob=Math.sin(p.walk*9)*.035, lift=p.jump>0?Math.sin(p.jump*PI/.78)*.8:0;
-      const pose={...p};
+      const pose={...p,horseScale:breed.size};
+      // All geometric dimensions are scaled, while foals have proportionally larger heads.
       // body proportions use y offsets while the whole horse can jump
       const base=lift+bob;
       blob(m,pose,0,1.38+base,0,.56,.49,.95,fur);
       blob(m,pose,0,1.65+base,.60,.32,.59,.36,fur);
-      blob(m,pose,0,1.89+base,.96,.33,.34,.43,fur);
-      blob(m,pose,0,1.71+base,1.26,.30,.20,.34,[.81,.71,.65]);
+      blob(m,pose,0,1.89+base,.96,breed.foal?.39:.33,breed.foal?.40:.34,.43,fur);
+      blob(m,pose,0,1.71+base,1.26,.30,.20,.34,breed.muzzle);
       for(const side of [-1,1]){
         blob(m,pose,side*.19,2.21+base,.92,.115,.25,.11,fur);
         blob(m,pose,side*.27,1.96+base,1.21,.055,.055,.05,[.14,.16,.18]);
       }
-      blob(m,pose,0,1.89+base,.61,.16,.38,.18,[.36,.27,.22]); // mane
+      blob(m,pose,0,1.89+base,.61,.16,.38,.18,breed.mane); // mane
       for(const side of [-1,1]) for(const z of [-.61,.60]){
         const pace=Math.sin(p.walk*8+(side===1?PI:0)+(z<0?PI*.65:0))*.14;
         limb(m,pose,side*.37,.62+base,z+pace,.21,1.12,.25,fur);
         limb(m,pose,side*.37,.105+lift,z+pace,.25,.21,.33,[.32,.33,.34]);
       }
-      blob(m,pose,0,1.08+base,-1.02,.17,.25,.55,[.40,.28,.22]);
+      blob(m,pose,0,1.08+base,-1.02,.17,.25,.55,breed.mane);
       // Saddle blanket on the companion makes the two horses distinguishable.
       if(isCompanion)blob(m,pose,0,1.83+base,-.12,.55,.12,.66,[.35,.56,.70]);
     }
@@ -368,7 +375,8 @@
       const m=mesh();
       // A soft ground shadow anchors the stylised figures to the meadow.
       for(const p of state.mode==='duo'?[state.player,state.companion]:[state.player]) {
-        ellipsoid(m,p.x,.01,p.z,.73,.022,.87,[.33,.52,.32]);
+        const s=p.form==='horse'?horseById(p.horseId).size:1;
+        ellipsoid(m,p.x,.01,p.z,.73*s,.022,.87*s,[.33,.52,.32]);
         if(p.form==='human')human(m,p);else horse(m,p,t,p===state.companion);
       }
       for(let i=0;i<stars.length;i++)if(!state.stars[i])sparkle(m,stars[i],t);
@@ -416,7 +424,7 @@
       if(forward||right) {
         const dx=right*Math.cos(cameraYaw)+forward*Math.sin(cameraYaw);
         const dz=forward*Math.cos(cameraYaw)-right*Math.sin(cameraYaw);
-        move(entity,dx,dz,entity.form==='human'?2.8:SPEEDS[state.gait],dt);
+        move(entity,dx,dz,entity.form==='human'?2.8:SPEEDS[state.gait]*horseById(entity.horseId).speed,dt);
       }
       if(entity.jump>0){entity.jump+=dt;if(entity.jump>=.78)entity.jump=0;}
       if(state.mode==='duo'&&state.following) {
@@ -445,8 +453,9 @@
       gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       const entity=state.active==='player'?state.player:state.companion;
       camX+=(entity.x-camX)*Math.min(1,dt*7);camZ+=(entity.z-camZ)*Math.min(1,dt*7);
-      const eye=[camX-Math.sin(cameraYaw)*8.8,5.2,camZ-Math.cos(cameraYaw)*8.8];
-      gl.uniformMatrix4fv(uPV,false,multiply(perspective(w/h),lookAt(eye,[camX,1.15,camZ])));
+      const visualHeight=entity.form==='human'?1.15:Math.max(.75,horseById(entity.horseId).size*1.15);
+      const eye=[camX-Math.sin(cameraYaw)*8.8,4.1+visualHeight,camZ-Math.cos(cameraYaw)*8.8];
+      gl.uniformMatrix4fv(uPV,false,multiply(perspective(w/h),lookAt(eye,[camX,visualHeight,camZ])));
       draw(staticBuffer,null,gl.STATIC_DRAW);
       draw(dynamicBuffer,sceneDynamic(now/1000),gl.DYNAMIC_DRAW);
       raf=requestAnimationFrame(frame);
