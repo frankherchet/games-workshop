@@ -1,6 +1,6 @@
 (function(root) {
   'use strict';
-  const M=root.SnailModel, A=root.SnailArt, STORAGE='cs-games:schneckenkampf:v1';
+  const M=root.SnailModel, A=root.SnailArt, V=root.SnailView, STORAGE='cs-games:schneckenkampf:v1';
   root.Arcade.games.schneckenkampf=function({host}) {
     let campaign=M.campaign(), state=null, level=0, difficulty='medium', character='fox';
     let disposed=false, paused=true, menu=true, shop=false, tool='water', seed='daisy', frame=0, last=0, clock=0, saveClock=0, hudClock=0;
@@ -10,9 +10,10 @@
     const escape=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     try{const raw=localStorage.getItem(STORAGE);if(raw)campaign=M.parseSave(raw)||M.campaign();}catch{storageOK=false;}
     function on(target,event,fn,options){target.addEventListener(event,fn,options);listeners.push(()=>target.removeEventListener(event,fn,options));}
-    host.innerHTML=`<div class="sn-root sn-refined"><a class="back-link" href="#alle">← Zur Spieleplattform</a><div class="sn-title"><div><span class="sn-kicker">EIN GARTEN VOLLER GEHEIMNISSE</span><h1>Schneckenkampf<span aria-hidden="true"> ✦</span></h1><p>Tagsüber Blütenzauber. Nachts beginnt die Gartenwache.</p></div><span class="sn-edition">GARDEN TALES · V0.3</span></div><section class="sn-setup" aria-label="Figur, Schwierigkeit und Garten auswählen"></section><section class="sn-play" hidden><div class="sn-hud"><div class="sn-hud-left"><span>NÄCHTE <b data-hud="nights">0</b></span><span>MÜNZEN <b data-hud="money">0</b></span><span>PFLANZEN <b data-hud="plants">6</b></span></div><div class="sn-hud-right"><strong data-hud="phase">Morgens</strong><span data-hud="garden">Bauerngarten</span><span data-hud="limit"></span></div></div><div class="sn-world"><canvas width="1920" height="1280" tabindex="0" aria-label="Schneckenkampf: Garten aus der Vogelperspektive. Steuerung unter dem Spielfeld.">Für dieses Spiel wird Canvas benötigt.</canvas><div class="sn-dialog" hidden></div></div><div class="sn-notice" role="status" aria-live="polite"></div><div class="sn-bar"><div class="sn-tools"><button data-tool="water" aria-pressed="true">Gießen</button><button data-tool="seed" aria-pressed="false">Pflanzen</button><button data-tool="repair" aria-pressed="false">Reparieren</button><select class="sn-inventory" aria-label="Samen oder Verteidigung auswählen"></select></div><div class="sn-utilities"><button data-action="shop">Stand</button><button data-action="night">Nacht starten</button><button data-action="pause">Pause</button><button data-action="menu">Levelauswahl</button><button data-action="fullscreen">Vollbild</button></div></div><div class="sn-controls"><div class="sn-joystick" aria-label="Touch-Joystick zum Bewegen"><span class="sn-stick"></span><i aria-hidden="true">✚</i></div><div class="sn-control-hint"><b>Dein Garten braucht dich.</b><span>Joystick / WASD: laufen · Leertaste: Aktion<br>E: Stand · N: Nacht · Esc: Pause</span></div><button class="sn-action" data-action="use"><span data-hud="action">Gießen</span><small data-hud="cooldown">BEREIT</small></button></div></section><section class="sn-help"><h2>Deine erste Gartenwache</h2><p>Gieße die Pflanzen, bevor die Nacht beginnt: Gehe in ihre Nähe und tippe sie an oder nutze den Aktionsbutton. Zum Stand oben rechts musst du hinlaufen. Kaufe Samen für leere Plätze und stelle Fallen auf freien Wegen auf. Nachts trifft deine Hacke eine nahe Schnecke in Blickrichtung – anschließend lädt sie kurz nach.</p><div class="sn-help-grid"><p><b>Blüten & Münzen</b>Gegossene Pflanzen bringen nach jeder Nacht Geld. Nach zwei trockenen Tagen verwelken sie. Schnecken bringen kleine Prämien.</p><p><b>Neue Gärten</b>5 Nächte im Bauerngarten öffnen den Waldgarten. 10 Nächte dort öffnen den Schlossgarten. Jeder Garten und Modus hat seinen eigenen Spielstand.</p><p><b>Dein Fortschritt</b>Automatische Speicherung auf diesem Gerät. Beim Verlassen pausiert die Partie. Neue Partien ersetzen nur den ausgewählten Garten und Modus; Freischaltungen bleiben.</p></div></section></div>`;
+    host.innerHTML=`<div class="sn-root sn-refined"><a class="back-link" href="#alle">← Zur Spieleplattform</a><div class="sn-title"><div><span class="sn-kicker">EIN GARTEN VOLLER GEHEIMNISSE</span><h1>Schneckenkampf<span aria-hidden="true"> ✦</span></h1><p>Tagsüber Blütenzauber. Nachts beginnt die Gartenwache.</p></div><span class="sn-edition">GARDEN TALES · V0.5</span></div><section class="sn-setup" aria-label="Figur, Schwierigkeit und Garten auswählen"></section><section class="sn-play" hidden><div class="sn-hud"><div class="sn-hud-left"><span>NÄCHTE <b data-hud="nights">0</b></span><span>MÜNZEN <b data-hud="money">0</b></span><span>PFLANZEN <b data-hud="plants">6</b></span></div><div class="sn-hud-right"><strong data-hud="phase">Morgens</strong><span data-hud="garden">Bauerngarten</span><span data-hud="limit"></span></div></div><div class="sn-world"><canvas width="1920" height="1280" tabindex="0" aria-label="Schneckenkampf: Garten aus der Vogelperspektive. Steuerung unter dem Spielfeld.">Für dieses Spiel wird Canvas benötigt.</canvas><button class="sn-fullscreen-toggle" data-action="fullscreen" title="Spiel bildschirmfüllend anzeigen">Vollbild</button><button class="sn-proximity sn-proximity-flower" data-action="near-water" hidden><svg viewBox="0 0 40 32" aria-hidden="true"><path d="M10 12h17v16H10zM27 15l10-8 2 4-12 12M10 14C1 5 0 27 10 23M15 8h9v4" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M11 14h14v12H11z" fill="currentColor" opacity=".35"/></svg><span>Gießen</span></button><button class="sn-proximity sn-proximity-shop" data-action="near-shop" hidden><span aria-hidden="true">✦</span> Stand öffnen</button><div class="sn-dialog" hidden></div></div><div class="sn-notice" role="status" aria-live="polite"></div><div class="sn-bar"><div class="sn-tools"><button data-tool="water" aria-pressed="true">Gießen</button><button data-tool="seed" aria-pressed="false">Pflanzen</button><button data-tool="repair" aria-pressed="false">Reparieren</button><select class="sn-inventory" aria-label="Samen oder Verteidigung auswählen"></select></div><div class="sn-utilities"><button data-action="shop">Stand</button><button data-action="night">Nacht starten</button><button data-action="pause">Pause</button><button data-action="menu">Levelauswahl</button></div></div><div class="sn-controls"><div class="sn-joystick" aria-label="Touch-Joystick zum Bewegen"><span class="sn-stick"></span><i aria-hidden="true">✚</i></div><div class="sn-control-hint"><b>Dein Garten braucht dich.</b><span>Joystick / WASD: laufen · Leertaste: Aktion<br>E: Stand · N: Nacht · Esc: Pause</span></div><button class="sn-action" data-action="use"><span data-hud="action">Gießen</span><small data-hud="cooldown">BEREIT</small></button></div></section><section class="sn-help"><h2>Deine erste Gartenwache</h2><p>Gieße die Pflanzen, bevor die Nacht beginnt: Gehe in ihre Nähe und tippe auf die eingeblendete Gießkanne oder nutze den Aktionsbutton. Beim Stand oben rechts erscheint ein antippbarer Shop-Hinweis. Über den goldenen Vollbildknopf oben rechts im Garten füllt das Spiel den Bildschirm. Kaufe Samen für leere Plätze und stelle Fallen auf freien Wegen auf. Nachts trifft deine Hacke eine nahe Schnecke in Blickrichtung – anschließend lädt sie kurz nach.</p><div class="sn-help-grid"><p><b>Blüten & Münzen</b>Gegossene Pflanzen bringen nach jeder Nacht Geld. Nach zwei trockenen Tagen verwelken sie. Schnecken bringen kleine Prämien.</p><p><b>Neue Gärten</b>5 Nächte im Bauerngarten öffnen den Waldgarten. 10 Nächte dort öffnen den Schlossgarten. Jeder Garten und Modus hat seinen eigenen Spielstand.</p><p><b>Dein Fortschritt</b>Automatische Speicherung auf diesem Gerät. Beim Verlassen pausiert die Partie. Neue Partien ersetzen nur den ausgewählten Garten und Modus; Freischaltungen bleiben.</p></div></section></div>`;
     const pane=host.querySelector('.sn-play'),setup=host.querySelector('.sn-setup'),canvas=host.querySelector('canvas'),context=canvas.getContext('2d'),dialog=host.querySelector('.sn-dialog'),notice=host.querySelector('.sn-notice'),select=host.querySelector('select'),stick=host.querySelector('.sn-stick'),joy=host.querySelector('.sn-joystick');
-    context.setTransform(2,0,0,2,0,0);
+    const flowerPrompt=host.querySelector('.sn-proximity-flower'),shopPrompt=host.querySelector('.sn-proximity-shop');
+    let view=V.camera(960,640,{x:465,y:510}),nearFlower=null;
     if(root.SnailAssets?.garden)host.querySelector('.sn-root').style.setProperty('--sn-scenery',`url("${root.SnailAssets.garden}")`);
     const fullscreen=root.ArcadeFullscreen.create({element:pane,button:host.querySelector('[data-action="fullscreen"]'),stage:host.querySelector('.sn-world'),aspect:3/2});
     function clear(){keys.clear();joystick={x:0,y:0};hold=false;stick.style.transform='translate(-50%,-50%)';}
@@ -32,7 +33,7 @@
     }
     function enter(s){
       state=s;coinEffects=[];state.coinEvents=[];level=s.level;difficulty=s.difficulty;character=s.character;menu=false;shop=false;paused=false;setup.hidden=true;pane.hidden=false;dialog.hidden=true;clear();
-      lastPhase=s.phase;lastOver=s.over;lastUnlock=campaign.unlocked;tool='water';updateInventory();sync();A.garden(context,state,clock);canvas.focus({preventScroll:true});save();
+      lastPhase=s.phase;lastOver=s.over;lastUnlock=campaign.unlocked;tool='water';updateInventory();sync();renderWorld();pane.style.scrollMarginTop=((document.querySelector('header')?.getBoundingClientRect().height||0)+12)+'px';pane.scrollIntoView({block:'start',behavior:'instant'});canvas.focus({preventScroll:true});save();
       if(s.over)gameOver();
     }
     function gameOver(){save();show('Der Garten ist verstummt',`${state.reason} Du hast ${state.nights} Nächte überlebt. Deine freigeschalteten Gärten bleiben erhalten.`,`<button class="sn-button" data-action="restart">Neue Partie</button><button class="sn-button sn-secondary" data-action="menu">Levelauswahl</button><a class="sn-button sn-secondary" href="#">Zurück zum Hauptmenü</a>`);}
@@ -91,7 +92,8 @@
       if(action==='restart')enter(M.newRun(level,difficulty,character));
       if(action==='continue')enter(campaign.runs[`${level}:${difficulty}`]);
       if(action==='menu')menuView();
-      if(action==='shop')openShop();
+      if(action==='shop'||action==='near-shop')openShop();
+      if(action==='near-water'&&!paused&&nearFlower){M.tend(state,state.plots[nearFlower.index]);save();sync();renderWorld();}
       if(action==='close-shop'){shop=false;paused=false;dialog.hidden=true;sync();canvas.focus({preventScroll:true});}
       if(action==='pause')pause();
       if(action==='resume'){paused=false;dialog.hidden=true;sync();canvas.focus({preventScroll:true});}
@@ -99,7 +101,7 @@
       if(action==='use')use();
     });
     on(select,'change',()=>{if(M.PLANTS[select.value]){seed=select.value;tool='seed';}else tool=`build:${select.value}`;sync();canvas.focus({preventScroll:true});});
-    on(canvas,'pointerdown',e=>{if(paused||menu)return;canvas.focus({preventScroll:true});const rect=canvas.getBoundingClientRect(),point={x:(e.clientX-rect.left)/rect.width*960,y:(e.clientY-rect.top)/rect.height*640};if(M.dist(point,{x:835,y:175})<90){openShop();return;}if(state.phase==='day')use(point);else{const d=M.dist(point,state.player);if(d>0){state.player.dx=(point.x-state.player.x)/d;state.player.dy=(point.y-state.player.y)/d;}}});
+    on(canvas,'pointerdown',e=>{if(paused||menu)return;canvas.focus({preventScroll:true});const rect=canvas.getBoundingClientRect(),point=V.unproject(view,{x:e.clientX-rect.left,y:e.clientY-rect.top});if(M.dist(point,{x:835,y:175})<90){openShop();return;}if(state.phase==='day')use(point);else{const d=M.dist(point,state.player);if(d>0){state.player.dx=(point.x-state.player.x)/d;state.player.dy=(point.y-state.player.y)/d;}}});
     function moveJoy(e){if(joyPointer!==e.pointerId)return;const rect=joy.getBoundingClientRect();let x=(e.clientX-rect.left-rect.width/2)/(rect.width*.35),y=(e.clientY-rect.top-rect.height/2)/(rect.height*.35);const length=Math.hypot(x,y);if(length>1){x/=length;y/=length;}joystick={x,y};stick.style.transform=`translate(calc(-50% + ${x*30}px),calc(-50% + ${y*30}px))`;}
     on(joy,'pointerdown',e=>{if(menu||paused)return;e.preventDefault();joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);moveJoy(e);canvas.focus({preventScroll:true});});on(joy,'pointermove',moveJoy);
     const releaseJoy=e=>{if(e.pointerId===joyPointer){joyPointer=null;joystick={x:0,y:0};stick.style.transform='translate(-50%,-50%)';}};
@@ -109,6 +111,25 @@
     on(document,'keydown',e=>{if(menu||e.target.closest('input,select,textarea'))return;const key=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' ','e','n','escape'].includes(key)){e.preventDefault();if(key==='escape'&&!e.repeat)pause();if(paused)return;keys.add(key);if(key===' '&&!e.repeat)use();if(key==='e'&&!e.repeat)openShop();if(key==='n'&&!e.repeat){M.beginNight(state);save();}}});
     on(document,'keyup',e=>keys.delete(e.key.toLowerCase()));
     const suspend=()=>{clear();save();if(!menu&&!paused&&!state?.over&&!shop)pause();};on(window,'blur',suspend);on(document,'visibilitychange',()=>{if(document.hidden)suspend();});on(window,'pagehide',save);on(document.querySelector('[data-info]'),'click',suspend);
+    function renderWorld(input={}){
+      if(!state||menu)return;
+      const rect=canvas.getBoundingClientRect();if(rect.width<1||rect.height<1)return;
+      const ratio=Math.min(2,window.devicePixelRatio||1),w=Math.round(rect.width*ratio),h=Math.round(rect.height*ratio);
+      if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+      view=V.camera(rect.width,rect.height,state.player,fullscreen.active);
+      context.setTransform(ratio*view.scale,0,0,ratio*view.scale,ratio*view.x,ratio*view.y);
+      A.garden(context,state,clock,input,coinEffects);
+      const nearby=V.nearby(state);nearFlower=nearby.flower;
+      flowerPrompt.hidden=paused||!nearFlower;shopPrompt.hidden=paused||!nearby.shop;
+      function anchor(button,p){
+        const point=V.project(view,p),margin=button===shopPrompt?80:56;
+        button.style.left=Math.max(margin,Math.min(rect.width-margin,point.x))+'px';
+        const top=fullscreen.active?(rect.height<550?155:rect.width<480?205:180):55,bottom=fullscreen.active?160:35;
+        button.style.top=Math.max(top,Math.min(Math.max(top,rect.height-bottom),point.y-45))+'px';
+      }
+      if(nearFlower){anchor(flowerPrompt,nearFlower);const watered=nearFlower.watered&&nearFlower.hp>=M.PLANTS[nearFlower.type].hp;flowerPrompt.disabled=watered;const label=watered?'Gegossen ✓':'Gießen',text=flowerPrompt.querySelector('span');if(text.textContent!==label)text.textContent=label;flowerPrompt.setAttribute('aria-label',M.PLANTS[nearFlower.type].name+(watered?' ist gegossen':' gießen'));}
+      if(nearby.shop)anchor(shopPrompt,{x:835,y:175});
+    }
     function loop(time){
       if(disposed)return;const dt=Math.min(.05,Math.max(0,(time-last)/1000));last=time;clock+=dt;
       if(state&&!menu){
@@ -122,7 +143,7 @@
         }
         hudClock+=dt;if(hudClock>.12){hudClock=0;sync();}for(const event of (state.coinEvents||[]).splice(0))coinEffects.push({...event,born:clock});
         coinEffects=coinEffects.filter(e=>clock-e.born<1.35);
-        A.garden(context,state,clock,input,coinEffects);
+        renderWorld(input);
       }
       frame=requestAnimationFrame(loop);
     }
