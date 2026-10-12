@@ -5,6 +5,7 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 ## Enthalten
 
 - Responsive Startseite, Suche und Kategorien.
+- Vollbild bei allen Spielen: native Fullscreen-API mit bildschirmfüllendem Browser-Fallback, proportional angepasstem Spielfeld, erreichbarer Steuerung und Rückkehr per Button oder Escape. Die tatsächliche Anzeige auf dem iPad muss noch geprüft werden.
 - Eigene, direkt verlinkbare Spielansichten über `#spiel/neon-breakout`, `#spiel/memory-quest` und `#spiel/pixel-runner`.
 - Schneckenkampf: märchenhafte Gartenpflege, Nachtkämpfe, drei freischaltbare Gärten, Shop und lokale Spielstände. Details: [Spielkonzept und Prüfstand](docs/schneckenkampf.md).
 - Neon Breakout: 40 Blöcke, drei Leben, Maus, Touch und Tastatur.

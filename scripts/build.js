@@ -1,9 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const order = ['core.js', 'catalog.js', 'art.js', 'session.js', 'games/breakout.js', 'games/memory.js', 'games/runner.js', 'games/snail-model.js', 'games/snail-art.js', 'games/snail-game.js', 'app.js'];
+const order = ['core.js', 'catalog.js', 'art.js', 'session.js', 'fullscreen.js', 'games/breakout.js', 'games/memory.js', 'games/runner.js', 'games/snail-model.js', 'games/snail-art.js', 'games/snail-game.js', 'app.js'];
 const html = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
-const css = ['style.css', 'games/snail-style.css'].map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
+const css = ['style.css', 'games/snail-style.css', 'fullscreen.css'].map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
 const scripts = order.map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
 if (/<\/script/i.test(scripts) || /<\/style/i.test(css)) throw new Error('Unsafe inline closing tag');
 const result = html.replace('<!-- STYLES -->', () => `<style>\n${css}\n</style>`).replace('<!-- SCRIPTS -->', () => `<script>\n${scripts}\n</script>`);
