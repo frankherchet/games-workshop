@@ -10,7 +10,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   isolated-preview:
-    if: github.repository == 'frankherchet/games-workshop' && github.ref == 'refs/heads/feature/pferdezauber-3d-prototyp' && github.event.head_commit.message == 'chore: publish one-time isolated Pferdezauber preview'
+    if: >-
+      github.repository == 'frankherchet/games-workshop' && github.ref == 'refs/heads/feature/pferdezauber-3d-prototyp' && github.event.head_commit.message == 'chore: publish one-time isolated Pferdezauber preview'
     runs-on: ubuntu-latest
     environment: allinkl
     steps:
