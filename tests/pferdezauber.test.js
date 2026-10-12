@@ -97,3 +97,90 @@ test('unknown horse id falls back to the default and does not escape validated c
   assert.equal(logic.newState('duo', 'some-invalid-id').companion.horseId, 'haflinger');
   assert.equal(logic.horseById('__proto__').id, 'haflinger');
 });
+
+function goToGoal(state) {
+  const goal=logic.objective(state);
+  const entity=state.active==='player'?state.player:state.companion;
+  entity.x=goal.target.x; entity.z=goal.target.z;
+  return logic.interact(state);
+}
+
+for (const mode of ['duo','horseOnly']) test(`Complete the adventure in ${mode}, including ability gates and reward`, () => {
+  const state=logic.newState(mode,'foal-black');
+  goToGoal(state);
+  assert.equal(state.quest,'trail');
+  for(let i=0;i<3;i++)goToGoal(state);
+  assert.equal(state.quest,'foal');
+  goToGoal(state);
+  assert.equal(state.quest,'escort');
+  // Lead the foal in short steps so it can keep up, rather than teleport it.
+  const entity=state.player;
+  const home={x:-9,z:7};
+  for(let i=0;i<800 && Math.hypot(entity.x-home.x,entity.z-home.z)>.1;i++) {
+    const dist=Math.hypot(entity.x-home.x,entity.z-home.z);
+    entity.x+=(home.x-entity.x)/dist*.08;
+    entity.z+=(home.z-entity.z)/dist*.08;
+    logic.advanceFoal(state,.04);
+  }
+  logic.interact(state);
+  assert.equal(state.quest,'stones');
+  for(let i=0;i<3;i++) {
+    const goal=logic.objective(state);
+    entity.x=goal.target.x; entity.z=goal.target.z;
+    if(goal.stone===1 && mode==='duo') {
+      assert.match(logic.interact(state),/Hufe/);
+      assert.equal(state.stars[1],false);
+      logic.transform(state);
+    }
+    if(goal.stone===2) {
+      assert.match(logic.interact(state),/Sprung/);
+      assert.equal(state.stars[2],false);
+      entity.jump=.3;
+    }
+    logic.interact(state);
+    entity.jump=0;
+  }
+  assert.equal(state.quest,'source');
+  assert.equal(logic.collected(state),3);
+  goToGoal(state);
+  assert.equal(state.quest,'complete');
+  assert.equal(logic.objective(state).target,null);
+  assert.equal(logic.interact(state),'');
+});
+
+test('Interactions require proximity and cannot skip the rescue or repeat a clue', () => {
+  const state=logic.newState('duo');
+  assert.match(logic.interact(state),/näher/);
+  assert.equal(state.quest,'meet');
+  goToGoal(state);
+  goToGoal(state);
+  assert.equal(state.trail,1);
+  logic.interact(state);
+  assert.equal(state.trail,1);
+  assert.equal(logic.collected(state),0);
+});
+
+test('Lumi waits when left behind, resumes nearby, and must actually reach the stable', () => {
+  const state=logic.newState('duo');
+  state.quest='escort';
+  const before={...state.foal};
+  state.player.x=10; state.player.z=10;
+  logic.advanceFoal(state,.04);
+  assert.equal(state.foal.x,before.x);
+  assert.equal(state.foal.z,before.z);
+  assert.match(logic.objective(state).text,/wartet/);
+  state.player.x=state.foal.x+3; state.player.z=state.foal.z;
+  logic.advanceFoal(state,.04);
+  assert.ok(state.foal.x>before.x);
+  assert.match(logic.interact(state),/Wegweiser|Warte/);
+  assert.equal(state.quest,'escort');
+  logic.switchTarget(state);
+  state.companion.x=state.foal.x+3; state.companion.z=state.foal.z;
+  const x=state.foal.x;
+  logic.advanceFoal(state,.04);
+  assert.ok(state.foal.x>x);
+  const fresh=logic.newState('duo');
+  assert.equal(fresh.quest,'meet');
+  assert.equal(fresh.trail,0);
+  assert.equal(fresh.foal.x,-13);
+});

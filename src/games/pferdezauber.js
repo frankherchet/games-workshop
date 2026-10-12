@@ -23,6 +23,7 @@
       player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, jump: 0, walk: 0 },
       companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', horseId: horseById(horseId).id, jump: 0, walk: 0 },
       active: 'player', gait: 0, following: true, stars: [false, false, false],
+      quest: 'meet', trail: 0, foal: { x: -13, z: -12, heading: 0, form: 'horse', horseId: 'foal-brown', jump: 0, walk: 0 },
     };
   }
   function switchTarget(s) {
@@ -36,7 +37,57 @@
     return true;
   }
   function collected(s) { return s.stars.filter(Boolean).length; }
-  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG };
+  const STABLE = { x: -9, z: 7 };
+  const KEEPER = { x: -7, z: 3, heading: 2.5, form: 'human', walk: 0, jump: 0 };
+  const TRAIL = [{ x: -4, z: 1 }, { x: -6, z: -4 }, { x: -10, z: -8 }];
+  const STONES = [{ x: 5, z: 5 }, { x: -8, z: 8 }, { x: 13, z: -10 }];
+  const SOURCE = { x: 10, z: -5 };
+  function controlled(s) { return s.active === 'player' ? s.player : s.companion; }
+  function distance(a,b) { return Math.hypot(a.x-b.x,a.z-b.z); }
+  function objective(s) {
+    const entity = controlled(s);
+    if (s.quest === 'meet') return { title:'1 · Das verschwundene Fohlen', text:'Stallwächterin Mira braucht deine Hilfe.', target:KEEPER, action:'Mit Mira sprechen' };
+    if (s.quest === 'trail') return { title:'1 · Hufspuren im Wald', text:`Untersuche die goldenen Hufspuren (${s.trail} / 3).`, target:TRAIL[s.trail], action:'Spuren untersuchen' };
+    if (s.quest === 'foal') return { title:'1 · Du hast Lumi gefunden!', text:'Nähere dich dem Fohlen und beruhige es.', target:s.foal, action:'Lumi beruhigen' };
+    if (s.quest === 'escort') return { title:'1 · Gemeinsam nach Hause', text:distance(entity,s.foal)>5 ? 'Lumi wartet hinter dir. Kehre zu ihr zurück.' : 'Führe Lumi zum Stall. Schritt oder Trab halten euch zusammen.', target:distance(entity,s.foal)>5?s.foal:STABLE, action:'Lumi am Stall abgeben' };
+    if (s.quest === 'stones') {
+      let index = -1;
+      for (let i=0;i<STONES.length;i++) if (!s.stars[i] && (index<0 || distance(entity,STONES[i])<distance(entity,STONES[index]))) index=i;
+      return { title:'2 · Die Quelle des Lichts', text:`Lichtsteine ${collected(s)} / 3 · Wiese: berühren · Stall: Pferdeform · Teich: im Sprung.`, target:STONES[index], action:['Wiesenstein berühren','Hufstein aktivieren','Sprungstein aktivieren'][index], stone:index };
+    }
+    if (s.quest === 'source') return { title:'2 · Das Tal wartet auf dich', text:'Bringe das gesammelte Licht zur Quelle am Teich.', target:SOURCE, action:'Quelle erwecken' };
+    return { title:'Das Tal leuchtet wieder!', text:'Lumi ist zu Hause. Dein Lichtkranz ist freigeschaltet – erkunde das Tal weiter.', target:null, action:'Abenteuer abgeschlossen' };
+  }
+  function interact(s) {
+    const goal=objective(s), entity=controlled(s);
+    if (!goal.target) return '';
+    if (distance(entity,goal.target)>2.3) return 'Gehe näher an dein Ziel heran. Der Wegweiser zeigt dir die Richtung.';
+    if (s.quest==='meet') { s.quest='trail'; return 'Mira: „Lumi ist verschwunden! Folge ihren goldenen Hufspuren in den Wald.“'; }
+    if (s.quest==='trail') { s.trail++; if(s.trail===TRAIL.length)s.quest='foal'; return s.quest==='foal'?'Ein leises Wiehern! Lumi ist gleich hinter den Bäumen.':'Frische Hufspuren! Folge dem nächsten Hinweis.'; }
+    if (s.quest==='foal') { s.quest='escort'; return 'Lumi vertraut dir und folgt dir jetzt. Gehe langsam mit ihr zum Stall.'; }
+    if (s.quest==='escort') {
+      if (distance(s.foal,STABLE)>3) return 'Warte auf Lumi und bringe sie mit zum Stall.';
+      s.quest='stones'; return 'Mira: „Danke! Lumi ist sicher. Erwecke nun die drei Lichtsteine – jeder hört auf eine andere Fähigkeit.“';
+    }
+    if (s.quest==='stones') {
+      if (goal.stone===1 && entity.form!=='horse') return 'Dieser Stein hört auf Hufe. Verwandle dich (T) oder wechsle zum Begleitpferd (Q).';
+      if (goal.stone===2 && entity.jump<=0) return 'Dieser Stein braucht einen Sprung! Springe und aktiviere ihn in der Luft.';
+      s.stars[goal.stone]=true;
+      if(collected(s)===STONES.length)s.quest='source';
+      return s.quest==='source'?'Die drei Steine antworten! Bringe ihr Licht zur Quelle.':'Ein Lichtstein erwacht! Suche den nächsten.';
+    }
+    s.quest='complete'; return '✨ Die Quelle leuchtet wieder! Lumi wiehert vor Freude. Du erhältst den Lichtkranz des Tals.';
+  }
+  function advanceFoal(s,dt) {
+    if(s.quest!=='escort')return;
+    const entity=controlled(s), f=s.foal, dist=distance(entity,f);
+    if(dist>1.6 && dist<=5) {
+      const step=Math.min(3*dt,dist-1.6), dx=entity.x-f.x, dz=entity.z-f.z;
+      f.x+=dx/dist*step; f.z+=dz/dist*step; f.heading=Math.atan2(dx,dz); f.walk+=step/3;
+    }
+  }
+  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal };
+
 
   root.Arcade.games.pferdezauber = function ({ host }) {
     const horseCards = HORSE_CATALOG.map(h => {
@@ -47,14 +98,15 @@
     }).join('');
     const html = [
       '<div class="pz">',
-      ' <div class="pz-top"><a href="#alle" class="pz-back">← Zur Spieleübersicht</a><div><span class="pz-spark">✦</span> PFERDEZAUBER <small>3D-Spielwiese · Prototyp</small></div></div>',
+      ' <div class="pz-top"><a href="#alle" class="pz-back">← Zur Spieleübersicht</a><div><span class="pz-spark">✦</span> PFERDEZAUBER <small>Das verschwundene Fohlen</small></div></div>',
+      ' <section class="pz-quest" aria-label="Dein Abenteuer"><div><h2 data-quest-title role="status" aria-live="polite"></h2><p data-quest-text></p></div><div class="pz-wayfinder" data-wayfinder><span data-arrow aria-hidden="true">↑</span><b data-distance></b></div></section>',
       ' <div class="pz-scene">',
-      '  <canvas class="pz-canvas" aria-label="Dreidimensionale Pferdewiese. Nutze Tastatur oder die Schaltflächen zur Steuerung."></canvas>',
-      '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtfunken</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div><div class="pz-hudcard pz-hud-breed"><span>Dein Pferd</span><b data-breed>Haflinger</b></div></div>',
+      '  <canvas class="pz-canvas" tabindex="0" aria-label="Dreidimensionale Pferdewiese. Nutze Tastatur oder die Schaltflächen zur Steuerung."></canvas>',
+      '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtsteine</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div><div class="pz-hudcard pz-hud-breed"><span>Dein Pferd</span><b data-breed>Haflinger</b></div></div>',
       '  <div class="pz-notice" role="status" aria-live="polite" data-notice>Willkommen im Tal der Wandelwinde!</div>',
       '  <div class="pz-pad" aria-label="Bewegen"><button data-move="up" aria-label="Vorwärts">▲</button><div><button data-move="left" aria-label="Nach links">◀</button><button data-move="down" aria-label="Rückwärts">▼</button><button data-move="right" aria-label="Nach rechts">▶</button></div></div>',
-      '  <div class="pz-actions"><button data-act="switch" title="Figur wechseln (Q)">⇄ <span>Wechseln</span></button><button data-act="transform" title="Verwandeln (T)">✦ <span>Verwandeln</span></button><button data-act="gait" title="Gangart (G)">♞ <span>Schritt</span></button><button data-act="jump" title="Springen (Leertaste)">↥ <span>Springen</span></button></div>',
-      '  <div class="pz-entry" data-entry><div class="pz-entry-card"><span class="pz-eyebrow">DEIN ABENTEUER BEGINNT</span><h1>Pferdezauber</h1><p>Wie möchtest du spielen? Wähle danach dein Lieblingspferd!</p>',
+      '  <div class="pz-actions"><button data-act="interact" title="Interagieren (E)">✋ <span>Interaktion</span></button><button data-act="switch" title="Figur wechseln (Q)">⇄ <span>Wechseln</span></button><button data-act="transform" title="Verwandeln (T)">✦ <span>Verwandeln</span></button><button data-act="gait" title="Gangart (G)">♞ <span>Schritt</span></button><button data-act="jump" title="Springen (Leertaste)">↥ <span>Springen</span></button></div>',
+      '  <div class="pz-entry" data-entry><div class="pz-entry-card"><span class="pz-eyebrow">DEIN ABENTEUER BEGINNT</span><h1>Pferdezauber</h1><p>Ein Fohlen ist verschwunden und die Lichtquelle verstummt. Mira zählt auf dich! Wähle deinen Modus und dein Lieblingspferd.</p>',
       '   <div class="pz-choice" role="group" aria-label="Spielmodus"><button data-mode="duo" aria-pressed="true">🐴 Mensch + Pferd <small>Begleiter, Figurenwechsel & Verwandlung</small></button><button data-mode="horseOnly" aria-pressed="false">🐎 Nur Pferd <small>Die Welt auf vier Hufen entdecken</small></button></div>',
       '   <h2 class="pz-section-title">Wähle dein Pferd</h2>',
       '   <div class="pz-horses" role="group" aria-label="Fohlen, Ponys und Pferde">',horseCards,'   </div>',
@@ -64,8 +116,8 @@
       '  </div></div>',
       '  <div class="pz-error" data-error hidden></div>',
       ' </div>',
-      ' <div class="pz-info"><p><strong>Deine erste Mission:</strong> Sammle die drei goldenen Lichtfunken auf der Wiese. Du kannst jederzeit die Spielfigur wechseln oder dich verwandeln.</p>',
-      ' <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>Q</kbd> Figur wechseln · <kbd>T</kbd> verwandeln · <kbd>G</kbd> Gangart · <kbd>Leertaste</kbd> springen. Kamera: mit Maus oder Finger ziehen.</div>',
+      ' <div class="pz-info"><p><strong>Deine erste Mission:</strong> Hilf Mira, finde Lumi und führe das Fohlen sicher zum Stall. Danach erweckst du die Lichtquelle mit drei Fähigkeitssteinen. Der Wegweiser zeigt zum nächsten Ziel; aktiviere es mit E oder der goldenen Aktionsschaltfläche.</p>',
+      ' <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>E</kbd> interagieren · <kbd>Q</kbd> Figur wechseln · <kbd>T</kbd> verwandeln · <kbd>G</kbd> Gangart · <kbd>Leertaste</kbd> springen. Kamera: mit Maus oder Finger ziehen.</div>',
       ' <div class="pz-more"><button data-act="follow">🐴 Begleiter: Folgen</button><button data-act="restart">↻ Neu beginnen</button></div>',
       ' <p class="pz-note">Dies ist eine erste spielbare Vorschau, noch kein fertiges Star-Stable-ähnliches Spiel. Aktuell werden weder Konten noch Online-Spielstände angelegt.</p></div>',
       '</div>',
@@ -84,7 +136,9 @@
     let selectedMode = 'duo', selectedHorseId = DEFAULT_HORSE;
     let state = newState('duo'), started = false, alive = true, raf = 0, last = 0, noticeUntil = 0;
     let cameraYaw = 0.18, camX = 0, camZ = 0, dragging = null;
-    const stars = [{ x: 5, z: 5 }, { x: -8, z: 8 }, { x: 13, z: -10 }];
+    const questTitle=shell.querySelector('[data-quest-title]'), questText=shell.querySelector('[data-quest-text]');
+    const wayfinder=shell.querySelector('[data-wayfinder]'), arrow=shell.querySelector('[data-arrow]'), distanceText=shell.querySelector('[data-distance]');
+    const interactButton=shell.querySelector('[data-act="interact"]');
     const PI = Math.PI;
     function hint(message) {
       notice.textContent = message;
@@ -96,9 +150,25 @@
       cameraYaw = 0.18; camX = state.player.x; camZ = state.player.z;
       started = true; entry.hidden = true;
       keys.clear(); updateHud();
-      hint('Entdecke drei goldene Lichtfunken! ✨');
+      hint('Mira wartet vor dem Stall. Folge dem Wegweiser und sprich mit ihr (E).');
+      canvas.focus({preventScroll:true});
+    }
+    function updateObjective() {
+      const goal=objective(state), entity=controlled(state);
+      if(questTitle.textContent!==goal.title)questTitle.textContent=goal.title;
+      if(questText.textContent!==goal.text)questText.textContent=goal.text;
+      wayfinder.hidden=!goal.target;
+      if(goal.target) {
+        distanceText.textContent=Math.ceil(distance(entity,goal.target))+' m';
+        arrow.style.transform='rotate('+(Math.atan2(goal.target.x-entity.x,goal.target.z-entity.z)-cameraYaw)+'rad)';
+      }
+      interactButton.disabled=!started || !goal.target;
+      interactButton.classList.toggle('pz-ready',!!goal.target && distance(entity,goal.target)<=2.3);
+      interactButton.setAttribute('aria-label',goal.action+' (E)');
+      interactButton.querySelector('span').textContent=goal.action;
     }
     function updateHud() {
+      updateObjective();
       starText.textContent = collected(state) + ' / 3';
       breedText.textContent = horseById(state.companion.horseId).name;
       const controlled = state.active === 'player' ? state.player : state.companion;
@@ -115,6 +185,7 @@
     function action(act) {
       if (act === 'restart') { started = false; entry.hidden = false; keys.clear(); updateHud(); return; }
       if (!started) return;
+      if (act === 'interact') { const message=interact(state); if(message)hint(message); }
       if (act === 'switch') { if (switchTarget(state)) hint('Jetzt steuerst du die andere Figur.'); }
       if (act === 'transform') { if (transform(state)) hint(state.player.form === 'horse' ? 'Du bist jetzt ein Zauberpferd! ✨' : 'Zurückverwandelt: Du bist wieder Mensch!'); }
       if (act === 'gait') { state.gait = (state.gait + 1) % 3; hint('Gangart: ' + ['Schritt','Trab','Galopp'][state.gait]); }
@@ -145,11 +216,12 @@
     shell.addEventListener('click', onClick);
     const keyMap = { arrowup:'up', w:'up', arrowleft:'left', a:'left', arrowdown:'down', s:'down', arrowright:'right', d:'right' };
     function onKeyDown(e) {
-      if (e.ctrlKey || e.metaKey || e.altKey || !alive) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || !alive || !started || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
       const key = e.key.toLowerCase();
-      if (keyMap[key] || ['q','t','g','f',' '].includes(key)) e.preventDefault();
+      if (keyMap[key] || ['q','t','g','f','e',' '].includes(key)) e.preventDefault();
       if (keyMap[key]) keys.add(keyMap[key]);
       if (e.repeat) return;
+      if (key === 'e') action('interact');
       if (key === 'q') action('switch');
       if (key === 't') action('transform');
       if (key === 'g') action('gait');
@@ -353,7 +425,7 @@
     }
     function human(m,p) {
       const moving=Math.sin(p.walk*9),lift=p.jump>0?Math.sin(p.jump*PI/.78)*.75:0;
-      const skin=[.91,.71,.56],shirt=[.59,.44,.70],jeans=[.34,.49,.62];
+      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:[.59,.44,.70],jeans=[.34,.49,.62];
       limb(m,p,0,1.26+lift,0,.62,.78,.37,shirt);
       blob(m,p,0,1.91+lift,.01,.29,.33,.27,skin);
       blob(m,p,0,2.15+lift,-.07,.32,.20,.31,[.36,.25,.22]);
@@ -379,7 +451,32 @@
         ellipsoid(m,p.x,.01,p.z,.73*s,.022,.87*s,[.33,.52,.32]);
         if(p.form==='human')human(m,p);else horse(m,p,t,p===state.companion);
       }
-      for(let i=0;i<stars.length;i++)if(!state.stars[i])sparkle(m,stars[i],t);
+      human(m,KEEPER);
+      if(state.quest!=='meet' && state.quest!=='trail') {
+        const foal=state.quest==='escort'||state.quest==='foal'?state.foal:{...state.foal,x:-12,z:7};
+        horse(m,foal,t,false);
+      }
+      if(state.quest==='trail') {
+        const track=TRAIL[state.trail];
+        for(let i=0;i<3;i++)for(const side of [-1,1])ellipsoid(m,track.x+side*.22,.035,track.z+i*.4,.13,.035,.18,[.98,.81,.38]);
+      }
+      if(['stones','source','complete'].includes(state.quest))for(let i=0;i<STONES.length;i++) {
+        const stone=STONES[i];
+        box(m,stone.x,.35,stone.z,.7,.7,.7,state.stars[i]?[.96,.82,.42]:[.48,.51,.57]);
+        if(!state.stars[i])sparkle(m,stone,t);
+      }
+      const lit=state.quest==='complete';
+      ellipsoid(m,SOURCE.x,.02,SOURCE.z,1.3,.08,1.3,lit?[.44,.87,.92]:[.36,.49,.53]);
+      if(lit) {
+        for(let i=0;i<7;i++)ellipsoid(m,SOURCE.x+Math.cos(i*PI*2/7)*.7,1.1+Math.sin(t+i)*.45,SOURCE.z+Math.sin(i*PI*2/7)*.7,.12,.12,.12,[1,.91,.58]);
+        const entity=controlled(state), y=entity.form==='human'?2.5:horseById(entity.horseId).size*2.6;
+        for(let i=0;i<7;i++)ellipsoid(m,entity.x+Math.cos(i*PI*2/7)*.4,y,entity.z+Math.sin(i*PI*2/7)*.4,.08,.08,.08,[1,.88,.38]);
+      }
+      const goal=objective(state);
+      if(goal.target) {
+        const y=3.2+Math.sin(t*2)*.15;
+        cone(m,goal.target.x,y,goal.target.z,.28,-.65,[1,.86,.40],4);
+      }
       return new Float32Array(m.a);
     }
     function multiply(a,b) {
@@ -432,14 +529,8 @@
         const dx=entity.x-other.x,dz=entity.z-other.z,dist=Math.hypot(dx,dz);
         if(dist>2.5)move(other,dx,dz,Math.min(5,2.6+(dist-2.5)*.65),dt);
       }
-      for(let i=0;i<stars.length;i++){
-        const s=stars[i];
-        if(!state.stars[i]&&Math.hypot(entity.x-s.x,entity.z-s.z)<1.35){
-          state.stars[i]=true;updateHud();
-          if(collected(state)===3)hint('✨ Geschafft! Alle drei Lichtfunken entdeckt. Das Abenteuer beginnt!');
-          else hint('✨ Lichtfunke entdeckt! Finde die übrigen.');
-        }
-      }
+      advanceFoal(state,dt);
+      updateObjective();
     }
     updateHud();
     function frame(now) {
