@@ -32,15 +32,24 @@
   const cooldown = s => Math.max(.35, DIFFICULTIES[s.difficulty].cooldown - s.haste * .18);
   const phaseName = s => s.over ? 'Runde beendet' : s.phase === 'night' ? 'Nacht' : s.dayTime < 60 ? 'Morgens' : s.dayTime < 120 ? 'Mittags' : 'Abends';
 
+  const PLOT_COUNT=24;
+  const plotPosition=i=>({x:310+(i%6)*52,y:245+Math.floor(i/6)*52});
+  const expansionPrice=s=>55+Math.max(0,(s.plots.filter(p=>p.unlocked).length-6)/3)*15;
+  function reward(s,amount,point){
+    if(amount<=0)return;
+    s.money+=amount;
+    if(!Array.isArray(s.coinEvents))s.coinEvents=[];
+    if(s.coinEvents.length<60)s.coinEvents.push({x:point.x,y:point.y,amount});
+  }
   function newRun(level = 0, difficulty = 'medium', character = 'gardener') {
     if (!LEVELS[level] || !DIFFICULTIES[difficulty] || !['gardener', 'gardeneress', 'fox'].includes(character)) throw new Error('Invalid run settings');
     return {
-      version: 1, level, difficulty, character, phase: 'day', dayTime: 0, nightTime: 0, nights: 0,
+      version: 2, level, difficulty, character, phase: 'day', dayTime: 0, nightTime: 0, nights: 0,
       money: DIFFICULTIES[difficulty].money, eaten: 0, dryLost: 0, kills: 0, damage: 1, haste: 0, cooldown: 0,
       player: { x: 465, y: 510, dx: 0, dy: -1 },
-      plots: Array.from({ length: 12 }, (_, i) => ({ x: 320 + (i % 4) * 80, y: 255 + Math.floor(i / 4) * 80, unlocked: i < 6, type: i < 6 ? 'daisy' : null, hp: i < 6 ? 3 : 0, watered: false, dry: 0 })),
+      plots: Array.from({ length: PLOT_COUNT }, (_, i) => ({ ...plotPosition(i), unlocked: i < 6, type: i < 6 ? 'daisy' : null, hp: i < 6 ? 3 : 0, watered: false, dry: 0 })),
       inventory: { daisy: 3, tulip: 0, moon: 0, crystal: 0, pit: 0, beer: 0, fence: 0, electric: 0, copper: 0, duck: 0, food: 1 },
-      structures: [], snails: [], spawned: 0, waveTotal: 0, spawnClock: 0, nextId: 1, over: false, reason: '',
+      coinEvents: [], structures: [], snails: [], spawned: 0, waveTotal: 0, spawnClock: 0, nextId: 1, over: false, reason: '',
       notice: 'Gieße deine sechs Sonnensterne. Der Stand steht oben rechts.', lastIncome: 0, lastAction: 0, attackFlash: 0
     };
   }
@@ -64,11 +73,11 @@
     if (s.over || s.phase !== 'night' || s.spawned < s.waveTotal || s.snails.length) return false;
     let income = 0;
     for (const p of living(s)) {
-      if (p.watered) { income += PLANTS[p.type].yield; p.dry = 0; }
+      if (p.watered) { const amount=PLANTS[p.type].yield; income += amount; reward(s,amount,p); p.dry = 0; }
       else { p.dry++; if (p.dry >= 2) { p.type = null; p.hp = 0; s.dryLost++; } }
       p.watered = false;
     }
-    s.nights++; s.lastIncome = income; s.money += income; s.phase = 'day'; s.dayTime = 0;
+    s.nights++; s.lastIncome = income; s.phase = 'day'; s.dayTime = 0;
     s.structures = s.structures.filter(item => ++item.age < ITEMS[item.type].life && item.hp > 0);
     s.notice = `Nacht ${s.nights} überlebt! Pflanzen bringen ${income} Münzen. Jetzt gießen und reparieren.`;
     checkLoss(s);
@@ -79,7 +88,7 @@
     let cost;
     if (id === 'damage') { if (s.damage >= 4) return false; cost = price(s, 35 * s.damage); }
     else if (id === 'haste') { if (s.haste >= 4) return false; cost = price(s, 30 * (s.haste + 1)); }
-    else if (id === 'expand') { if (s.plots.every(p => p.unlocked)) return false; cost = price(s, s.plots.filter(p => p.unlocked).length === 6 ? 55 : 85); }
+    else if (id === 'expand') { if (s.plots.every(p => p.unlocked)) return false; cost = price(s, expansionPrice(s)); }
     else { const entry = PLANTS[id] || ITEMS[id]; if (!entry || (PLANTS[id] && entry.level > unlockedLevel)) return false; cost = price(s, entry.price); }
     if (s.money < cost) { s.notice = 'Dafür fehlen dir noch Münzen.'; return false; }
     s.money -= cost;
@@ -123,7 +132,7 @@
   }
   function kill(s, snail) {
     if (snail.hp <= 0) return;
-    snail.hp = 0; s.kills++; s.money += snail.reward;
+    snail.hp = 0; s.kills++; reward(s,snail.reward,snail);
   }
   function attack(s) {
     if (s.phase !== 'night' || s.over || s.cooldown > 0) return false;
@@ -208,20 +217,27 @@
       const result = campaign(); result.unlocked = c.unlocked; result.best = c.best;
       for (let level = 0; level <= c.unlocked; level++) for (const difficulty of Object.keys(DIFFICULTIES)) {
         const s = c.runs[`${level}:${difficulty}`]; if (!s) continue;
-        if (s.version !== 1 || s.level !== level || s.difficulty !== difficulty || !['gardener','gardeneress','fox'].includes(s.character) || !['day','night'].includes(s.phase)) continue;
+        if (![1,2].includes(s.version) || s.level !== level || s.difficulty !== difficulty || !['gardener','gardeneress','fox'].includes(s.character) || !['day','night'].includes(s.phase)) continue;
         const finite = (obj, names) => names.every(k => typeof obj[k] === 'number' && Number.isFinite(obj[k]) && obj[k] >= 0 && obj[k] < 1e7);
         if (!finite(s, ['money','nights','eaten','dryLost','kills','damage','haste','cooldown','dayTime','nightTime','spawned','waveTotal','spawnClock','nextId','attackFlash','lastAction','lastIncome']) || s.damage < 1 || s.damage > 4 || s.haste > 4 || !Number.isInteger(s.nights) || s.waveTotal > 1000 || !s.player || !finite(s.player,['x','y']) || !Number.isFinite(s.player.dx) || !Number.isFinite(s.player.dy)) continue;
-        if (!Array.isArray(s.plots) || s.plots.length !== 12 || !s.plots.every(p=>finite(p,['x','y','hp','dry']) && (p.type===null || PLANTS[p.type]) && typeof p.unlocked==='boolean' && typeof p.watered==='boolean')) continue;
+        if (!Array.isArray(s.plots) || s.plots.length !== (s.version===1?12:PLOT_COUNT) || !s.plots.every(p=>finite(p,['x','y','hp','dry']) && (p.type===null || PLANTS[p.type]) && typeof p.unlocked==='boolean' && typeof p.watered==='boolean')) continue;
         if (!s.inventory || !Object.keys({...PLANTS,...ITEMS}).every(k=>Number.isInteger(s.inventory[k]) && s.inventory[k]>=0 && s.inventory[k]<100000)) continue;
         if (!Array.isArray(s.structures) || s.structures.length>200 || !s.structures.every(t=>ITEMS[t.type] && t.type!=='food' && finite(t,['x','y','hp','charges','age','id']) && Number.isFinite(t.timer))) continue;
         if (!Array.isArray(s.snails) || s.snails.length>1000 || !s.snails.every(n=>['normal','fast','armored','giant'].includes(n.type) && finite(n,['x','y','hp','maxHp','speed','reward','bite','id']) && Number.isFinite(n.timer) && Number.isFinite(n.dx) && Number.isFinite(n.dy))) continue;
+        if(s.version===1){
+          // Retain existing plants, water, HP and unlocks; add empty expansion plots.
+          const old=s.plots;
+          s.plots=Array.from({length:PLOT_COUNT},(_,i)=>({...plotPosition(i),unlocked:false,type:null,hp:0,watered:false,dry:0,...(old[i]||{}),...plotPosition(i)}));
+          s.version=2;
+        }
+        s.coinEvents=[]; // Effects are transient and never replay after restoring.
         s.over = Boolean(s.over); s.reason = typeof s.reason === 'string' ? s.reason.slice(0,250) : ''; s.notice = typeof s.notice === 'string' ? s.notice.slice(0,250) : '';
         result.runs[`${level}:${difficulty}`] = s;
       }
       return result;
     } catch { return null; }
   }
-  const model = { LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, place, repair, attack, spawn, step, campaign, record, parseSave };
+  const model = { PLOT_COUNT, expansionPrice, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, place, repair, attack, spawn, step, campaign, record, parseSave };
   root.SnailModel = model;
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
 })(globalThis);

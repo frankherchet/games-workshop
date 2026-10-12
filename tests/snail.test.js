@@ -4,9 +4,9 @@ const M=require('../src/games/snail-model.js');
 function endNight(s){assert.equal(M.beginNight(s),true);s.spawned=s.waveTotal;s.snails=[];assert.equal(M.finishNight(s),true);}
 function enemy(s,changes={}){M.spawn(s,()=>.4);Object.assign(s.snails.at(-1),changes);return s.snails.at(-1);}
 
-test('A new garden has six living flowers, six locked plots and starting seeds',()=>{
+test('A new garden has six living flowers, eighteen locked plots and starting seeds',()=>{
   const s=M.newRun();assert.equal(M.living(s).length,6);assert.equal(s.plots.filter(p=>p.unlocked).length,6);assert.equal(s.inventory.daisy,3);
-  assert.equal(s.phase,'day');assert.equal(s.money,70);
+  assert.equal(s.phase,'day');assert.equal(s.money,70);assert.equal(s.plots.length,24);
 });
 test('Watered flowers yield income and dry flowers do not',()=>{
   const s=M.newRun();s.plots[0].watered=true;s.plots[1].watered=true;endNight(s);
@@ -33,7 +33,7 @@ test('Shop prices are discounted on easy; insufficient money never creates an it
 });
 test('Expansion unlocks exactly three plots and does not create free plants',()=>{
   const s=M.newRun();s.money=500;assert.equal(M.buy(s,'expand'),true);assert.equal(s.plots.filter(p=>p.unlocked).length,9);
-  assert.equal(M.living(s).length,6);M.buy(s,'expand');assert.equal(s.plots.filter(p=>p.unlocked).length,12);assert.equal(M.buy(s,'expand'),false);
+  assert.equal(M.living(s).length,6);M.buy(s,'expand');assert.equal(s.plots.filter(p=>p.unlocked).length,12);s.money=10000;for(let i=0;i<4;i++)assert.equal(M.buy(s,'expand'),true);assert.equal(s.plots.filter(p=>p.unlocked).length,24);assert.equal(M.buy(s,'expand'),false);
 });
 test('Rare seeds require a garden unlock and upgrades have explicit caps',()=>{
   const s=M.newRun();s.money=5000;assert.equal(M.buy(s,'moon',0),false);assert.equal(M.buy(s,'moon',1),true);
@@ -104,4 +104,14 @@ test('Defeated games with eaten plants can still be restored',()=>{
 test('Corrupt storage and invalid run settings are rejected safely',()=>{
   assert.equal(M.parseSave('bad json'),null);assert.equal(M.parseSave('{"version":99}'),null);assert.throws(()=>M.newRun(9));
   const c=M.campaign(),s=M.newRun();s.money=-1;M.record(c,s);assert.equal(Object.keys(M.parseSave(JSON.stringify(c)).runs).length,0);
+});
+
+test('Old twelve-plot saves migrate to 24 slots without losing progress or replaying rewards',()=>{
+ const c=M.campaign(),s=M.newRun();s.version=1;s.plots=s.plots.slice(0,12);s.plots[1].type='tulip';s.plots[1].watered=true;s.plots[1].hp=4;s.money=123;s.nights=3;M.record(c,s);
+ const restored=M.parseSave(JSON.stringify(c)).runs['0:medium'];assert.equal(restored.version,2);assert.equal(restored.plots.length,24);assert.equal(restored.money,123);assert.equal(restored.nights,3);assert.equal(restored.plots[1].type,'tulip');assert.equal(restored.plots[1].watered,true);assert.equal(restored.plots[1].hp,4);assert.equal(restored.plots.filter(p=>p.unlocked).length,6);assert.deepEqual(restored.coinEvents,[]);
+});
+test('Kill and plant income emit accurate single rewards, never expenses or restore duplicates',()=>{
+ const s=M.newRun();M.beginNight(s);s.player={x:465,y:450,dx:1,dy:0};enemy(s,{x:480,y:450});M.attack(s);assert.equal(s.coinEvents.length,1);assert.equal(s.coinEvents[0].amount,2);M.attack(s);assert.equal(s.coinEvents.length,1);
+ s.snails=[];s.spawned=s.waveTotal;s.plots[0].watered=true;const money=s.money;M.finishNight(s);assert.equal(s.money,money+2);assert.equal(s.coinEvents.length,2);assert.equal(s.coinEvents[1].x,s.plots[0].x);
+ const c=M.record(M.campaign(),s);assert.deepEqual(M.parseSave(JSON.stringify(c)).runs['0:medium'].coinEvents,[]);
 });

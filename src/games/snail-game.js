@@ -4,6 +4,7 @@
   root.Arcade.games.schneckenkampf=function({host}) {
     let campaign=M.campaign(), state=null, level=0, difficulty='medium', character='fox';
     let disposed=false, paused=true, menu=true, shop=false, tool='water', seed='daisy', frame=0, last=0, clock=0, saveClock=0, hudClock=0;
+    let shopCategory='plants',coinEffects=[];
     let lastPhase='day', lastOver=false, lastUnlock=0, joystick={x:0,y:0}, joyPointer=null, hold=false, storageOK=true;
     const keys=new Set(),listeners=[];
     const escape=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +21,7 @@
       try{localStorage.setItem(STORAGE,JSON.stringify(campaign));storageOK=true;}catch{storageOK=false;}
     }
     function menuView(){
-      clear();paused=true;menu=true;shop=false;if(state)save();pane.hidden=true;setup.hidden=false;dialog.hidden=true;fullscreen.exit();
+      coinEffects=[];clear();paused=true;menu=true;shop=false;if(state)save();pane.hidden=true;setup.hidden=false;dialog.hidden=true;fullscreen.exit();
       const saved=campaign.runs[`${level}:${difficulty}`];
       setup.innerHTML=`<div class="sn-menu-hero"><div><span class="sn-kicker">WILLKOMMEN IN DEINEM KLEINEN REICH</span><h2>Blumen pflegen.<br>Schnecken trotzen.</h2><p>Wähle deine Gartenwache. Bewahre die Blüten vor dem, was nachts durch die Hecken kriecht.</p></div><canvas class="sn-menu-art" width="960" height="640" aria-label="Vorschau des märchenhaften Gartens"></canvas></div><div class="sn-menu-body"><div class="sn-choice-columns"><fieldset><legend>01 · Deine Figur</legend><div class="sn-character-row">${[['gardener','Gärtner'],['gardeneress','Gärtnerin'],['fox','Farmer-Fuchs']].map(([id,name])=>`<button data-character="${id}" aria-pressed="${character===id}"><canvas width="160" height="180" data-portrait="${id}" aria-hidden="true"></canvas><span>${name}</span></button>`).join('')}</div><p class="sn-muted">Alle drei Figuren sind gleich stark.</p></fieldset><fieldset><legend>02 · Deine Herausforderung</legend><div class="sn-difficulties">${Object.entries(M.DIFFICULTIES).map(([id,d])=>`<button data-difficulty="${id}" aria-pressed="${difficulty===id}">${d.label}</button>`).join('')}</div><p class="sn-muted">${difficulty==='easy'?'Günstiger einkaufen, weniger Schnecken, schnellere Hacke.':difficulty==='hard'?'Stärkere Wellen und höchstens 6 + eine weitere gefressene Pflanze je zwei überlebten Nächten.':'Die normale Gartenwache. Pflege, Planung und ein guter Hackenschlag.'}</p></fieldset></div><fieldset class="sn-levels"><legend>03 · Dein Garten</legend><div>${M.LEVELS.map((l,i)=>`<button data-level="${i}" ${i>campaign.unlocked?'disabled':''} aria-pressed="${level===i}"><span class="sn-garden-number">${i>campaign.unlocked?'🔒':`0${i+1}`}</span><strong>${l.name}</strong><small>${i>campaign.unlocked?`${M.LEVELS[i-1].unlock} Nächte im ${M.LEVELS[i-1].name}`:`Bestwert: ${campaign.best[i]} Nächte`}</small><span>${l.subtitle}</span></button>`).join('')}</div></fieldset><div class="sn-start-row">${saved&&!saved.over?`<button class="sn-button" data-action="continue">Fortsetzen · Nacht ${saved.nights+1}</button>`:''}<button class="sn-button ${saved&&!saved.over?'sn-secondary':''}" data-action="new">${saved?'Neue Partie':'Garten betreten'} <span aria-hidden="true">→</span></button><span class="sn-save-label">${storageOK?'Automatisch gespeichert · nur auf diesem Gerät':'Speicherung nicht verfügbar – bitte Browser-Einstellungen prüfen'}</span></div></div>`;
       const preview=setup.querySelector('.sn-menu-art'),pc=preview.getContext('2d');A.garden(pc,M.newRun(level,difficulty,character),0);A.ready.then(()=>{if(preview.isConnected&&!disposed)A.garden(pc,M.newRun(level,difficulty,character),0);});
@@ -30,7 +31,7 @@
       clear();paused=true;dialog.hidden=false;dialog.innerHTML=`<div class="sn-paper"><span class="sn-kicker">SCHNECKENKAMPF</span><h2>${escape(title)}</h2><p>${escape(text)}</p><div class="sn-dialog-actions">${actions}</div></div>`;
     }
     function enter(s){
-      state=s;level=s.level;difficulty=s.difficulty;character=s.character;menu=false;shop=false;paused=false;setup.hidden=true;pane.hidden=false;dialog.hidden=true;clear();
+      state=s;coinEffects=[];state.coinEvents=[];level=s.level;difficulty=s.difficulty;character=s.character;menu=false;shop=false;paused=false;setup.hidden=true;pane.hidden=false;dialog.hidden=true;clear();
       lastPhase=s.phase;lastOver=s.over;lastUnlock=campaign.unlocked;tool='water';updateInventory();sync();A.garden(context,state,clock);canvas.focus({preventScroll:true});save();
       if(s.over)gameOver();
     }
@@ -61,15 +62,16 @@
       else if(tool.startsWith('build:'))M.place(state,tool.slice(6),point);
       updateInventory();save();sync();
     }
-    function openShop(){
+    function openShop(category=shopCategory){
+      shopCategory=category;
       if(!state||state.phase!=='day'||state.over)return;
       if(M.dist(state.player,{x:835,y:175})>140){state.notice='Der Stand ist oben rechts. Gehe näher heran, um einzukaufen.';sync();return;}
       clear();paused=true;shop=true;dialog.hidden=false;
-      const products=[...Object.entries(M.PLANTS).map(([id,p])=>({id,...p,description:`${p.rarity} · ${p.yield} Münzen pro gegossener Pflanze und Nacht.`,locked:p.level>campaign.unlocked})),...Object.entries(M.ITEMS).map(([id,p])=>({id,...p})),
-        {id:'damage',name:'Stärkere Hacke',price:35*state.damage,description:`Schaden ${state.damage} → ${state.damage+1}.`,locked:state.damage>=4},
-        {id:'haste',name:'Leichtere Hacke',price:30*(state.haste+1),description:'Verkürzt den Cooldown um 0,18 Sekunden.',locked:state.haste>=4},
-        {id:'expand',name:'Garten erweitern',price:state.plots.filter(p=>p.unlocked).length===6?55:85,description:'Drei weitere Pflanzplätze für diesen Garten.',locked:state.plots.every(p=>p.unlocked)}];
-      dialog.innerHTML=`<div class="sn-paper sn-shop"><div class="sn-shop-heading"><div><span class="sn-kicker">DER KLEINE GARTENSTAND</span><h2>Samen, Schutz & gute Ideen</h2></div><button class="sn-button sn-secondary" data-action="close-shop">Zurück zum Garten</button></div><p>${state.money} Münzen · Futter im Vorrat: ${state.inventory.food}. Während des Einkaufs ist die Zeit angehalten.</p><div class="sn-shop-grid">${products.map(p=>`<article><strong>${p.name}</strong><p>${p.description}</p><button data-buy="${p.id}" ${p.locked||state.money<M.price(state,p.price)?'disabled':''}>${p.locked?(M.PLANTS[p.id]?'Nächsten Garten freischalten':'Maximum erreicht'):`Kaufen · ${M.price(state,p.price)} Münzen`}</button></article>`).join('')}</div><p class="sn-muted">Samen und Fallen nach dem Kauf auswählen. Fallen auf freien Wegen neben dem Beet aufstellen. Enten verbrauchen beim Nachtstart automatisch Futter.</p></div>`;sync();
+      const products=[...Object.entries(M.PLANTS).map(([id,p])=>({id,category:'plants',...p,description:`${p.rarity} · ${p.yield} Münzen pro gegossener Pflanze und Nacht.`,locked:p.level>campaign.unlocked})),...Object.entries(M.ITEMS).map(([id,p])=>({id,category:'defense',...p})),
+        {id:'damage',category:'weapons',name:'Stärkere Hacke',price:35*state.damage,description:`Schaden ${state.damage} → ${state.damage+1}.`,locked:state.damage>=4},
+        {id:'haste',category:'weapons',name:'Leichtere Hacke',price:30*(state.haste+1),description:'Verkürzt den Cooldown um 0,18 Sekunden.',locked:state.haste>=4},
+        {id:'expand',category:'plants',name:'Garten erweitern',price:M.expansionPrice(state),description:'Drei weitere Pflanzplätze für diesen Garten.',locked:state.plots.every(p=>p.unlocked)}];
+      dialog.innerHTML=`<div class="sn-paper sn-shop"><div class="sn-shop-heading"><div><span class="sn-kicker">DER KLEINE GARTENSTAND</span><h2>Samen, Schutz & gute Ideen</h2></div><button class="sn-button sn-secondary" data-action="close-shop">Zurück zum Garten</button></div><p>${state.money} Münzen · Futter im Vorrat: ${state.inventory.food}. Während des Einkaufs ist die Zeit angehalten.</p><nav class="sn-shop-categories" aria-label="Shop-Kategorien">${[["weapons","Waffen"],["plants","Pflanzen"],["defense","Fallen/Verteidigung"]].map(([id,name])=>`<button class="sn-button sn-secondary" data-shop-category="${id}" aria-pressed="${shopCategory===id}">${name}</button>`).join('')}</nav><div class="sn-shop-grid">${products.filter(p=>p.category===shopCategory).map(p=>`<article><strong>${p.name}</strong><p>${p.description}</p><button data-buy="${p.id}" ${p.locked||state.money<M.price(state,p.price)?'disabled':''}>${p.locked?(M.PLANTS[p.id]?'Nächsten Garten freischalten':'Maximum erreicht'):`Kaufen · ${M.price(state,p.price)} Münzen`}</button></article>`).join('')}</div><p class="sn-muted">Samen und Fallen nach dem Kauf auswählen. Fallen auf freien Wegen neben dem Beet aufstellen. Enten verbrauchen beim Nachtstart automatisch Futter.</p></div>`;sync();
     }
     function pause(){
       if(menu||!state||state.over||shop)return;
@@ -81,6 +83,7 @@
       if(button.dataset.character){character=button.dataset.character;menuView();return;}
       if(button.dataset.difficulty){difficulty=button.dataset.difficulty;menuView();return;}
       if(button.dataset.level!==undefined){level=Number(button.dataset.level);menuView();return;}
+      if(button.dataset.shopCategory){openShop(button.dataset.shopCategory);return;}
       if(button.dataset.buy){M.buy(state,button.dataset.buy,campaign.unlocked);save();updateInventory();openShop();return;}
       if(button.dataset.tool){tool=button.dataset.tool;sync();canvas.focus({preventScroll:true});return;}
       const action=button.dataset.action;
@@ -117,7 +120,9 @@
           else if(state.phase!==lastPhase){lastPhase=state.phase;save();updateInventory();if(state.phase==='day'){const unlocked=campaign.unlocked>lastUnlock;lastUnlock=campaign.unlocked;show(unlocked?'Ein neuer Garten ist frei!':`Nacht ${state.nights} überlebt`,`${state.lastIncome} Münzen für deine gegossenen Pflanzen.${unlocked?` ${M.LEVELS[campaign.unlocked].name} ist jetzt in der Levelauswahl verfügbar.`:''} Pflege deinen Garten für die nächste Nacht.`,`<button class="sn-button" data-action="resume">Weitergärtnern</button><button class="sn-button sn-secondary" data-action="menu">Levelauswahl</button>`);}}
           saveClock+=dt;if(saveClock>2){saveClock=0;save();}
         }
-        hudClock+=dt;if(hudClock>.12){hudClock=0;sync();}A.garden(context,state,clock,input);
+        hudClock+=dt;if(hudClock>.12){hudClock=0;sync();}for(const event of (state.coinEvents||[]).splice(0))coinEffects.push({...event,born:clock});
+        coinEffects=coinEffects.filter(e=>clock-e.born<1.35);
+        A.garden(context,state,clock,input,coinEffects);
       }
       frame=requestAnimationFrame(loop);
     }

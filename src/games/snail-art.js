@@ -102,16 +102,19 @@
 
   function flower(c,p,time,night){
     const x=p.x,y=p.y;
-    if(!p.unlocked){rect(c,x-27,y-27,54,54,'#344f3322');for(let i=0;i<4;i++)rect(c,x-24+i*15,y-25,5,2,'#c3ce9355');c.fillStyle='#dfdaa36b';c.font='16px monospace';c.textAlign='center';c.fillText('+',x,y+6);return;}
-    rect(c,x-29,y-28,58,58,'#5b4934');rect(c,x-27,y-26,54,53,p.watered?'#795637':'#997346');rect(c,x-27,y-26,54,3,p.watered?'#967049':'#b28c59');
-    for(let i=0;i<22;i++){const px=x-23+hash(i,x)*46,py=y-20+hash(i,y)*44;rect(c,px,py,2+hash(i,7)*3,1,i%2?'#442e2b40':'#dfb88350');}for(let i=0;i<4;i++)rect(c,x-23,y-17+i*11,45,1,'#4c382d33');
-    // Fine earth grains, grass edging and tiny roots connect plots to the landscape.
-    for(let i=0;i<150;i++){
-      const gx=x-25+hash(i+75,x)*50,gy=y-23+hash(i+51,y)*48;
-      rect(c,gx,gy,1+(i%7===0?1:0),1,[p.watered?'#64452f':'#8c673e','#b3976155','#4b392e66','#d6b68144'][i%4]);
+    c.save();c.translate(x,y);c.scale(.66,.66);c.translate(-x,-y);
+    if(!p.unlocked){rect(c,x-27,y-27,54,54,'#344f3322');for(let i=0;i<4;i++)rect(c,x-24+i*15,y-25,5,2,'#c3ce9355');c.fillStyle='#dfdaa36b';c.font='16px monospace';c.textAlign='center';c.fillText('+',x,y+6);c.restore();return;}
+    // Sunken soil follows the grass without a raised rectangular planter.
+    oval(c,x,y+10,29,20,'#27482e25',1);
+    oval(c,x,y+9,26,17,p.watered?'#65472f':'#896341',1);
+    oval(c,x-1,y+7,24,15,p.watered?'#745238':'#967248',1);
+    for(let i=0;i<130;i++){
+      const angle=hash(i+75,x)*Math.PI*2,radius=Math.sqrt(hash(i+51,y));
+      const gx=x+Math.cos(angle)*radius*24,gy=y+8+Math.sin(angle)*radius*14;
+      rect(c,gx,gy,1+(i%7===0?1:0),1,[p.watered?'#513d2d':'#795539','#b3976188','#4b392e99','#d6b68155'][i%4]);
     }
-    for(let i=0;i<16;i++){const gx=x-28+i*3.6,gy=y+28+(i%3);rect(c,gx,gy-2-(i%4),1,3+i%4,i%2?'#5f814a':'#91a75d');}
-    if(!p.type){rect(c,x-8,y-2,16,2,'#d4b384');rect(c,x-1,y-8,2,15,'#d4b384');return;}
+    for(let i=0;i<18;i++){const angle=i*Math.PI*2/18,gx=x+Math.cos(angle)*26,gy=y+9+Math.sin(angle)*17;rect(c,gx,gy-2-(i%3),1,3+i%3,i%2?'#54733f':'#8ba059');}
+    if(!p.type){rect(c,x-8,y-2,16,2,'#d4b384');rect(c,x-1,y-8,2,15,'#d4b384');c.restore();return;}
     const plant=M.PLANTS[p.type],dry=p.dry>0,weak=p.hp<plant.hp*.5,bend=Math.round(Math.sin(time*1.2+x*.01)*(dry?1:2)),fy=y-20+(dry?6:0),fx=x+bend;
     rect(c,x-2,y-17,4,33,dry?'#85744c':'#3a7042');rect(c,x,y-17,1,30,dry?'#b3a16c':'#7aa962');
     oval(c,x-10,y+2,9,4,dry?'#948249':'#538a45',2);oval(c,x+9,y-6,8,4,dry?'#a49056':'#6c9d4a',2);rect(c,x-13,y+1,10,1,'#9cbc6d');
@@ -139,6 +142,7 @@
     if(p.watered){rect(c,x+19,y+14,4,7,'#61b6d3');rect(c,x+20,y+12,2,3,'#a8e9ed');rect(c,x-17,y+15,5,1,'#c3e7e77a');}
     if((p.type==='moon'||p.type==='crystal')&&night){const light=Math.max(.15,.5+Math.sin(time*1.5+x)*.2);c.globalAlpha=light;sparkle(c,fx+19,fy-12,2,'#d9ecff');c.globalAlpha=1;}
     rect(c,x-15,y+23,30,3,'#3a4130');rect(c,x-15,y+23,30*p.hp/plant.hp,3,weak?'#dd9b7a':'#a7c980');
+    c.restore();
   }
 
   function character(c,type,x,y,time=0,moving=false,direction={dx:0,dy:1},pose={}){
@@ -211,7 +215,8 @@
     }
     if(night)for(let i=0;i<4;i++){const x=(time*6+i*287)%1320-180,y=230+i*88+Math.sin(time*.3+i)*12;c.save();c.translate(x,y);c.scale(2.8,.24);const fog=c.createRadialGradient(0,0,5,0,0,110);fog.addColorStop(0,'#bdcad623');fog.addColorStop(.55,'#b2c0cd12');fog.addColorStop(1,'#b2c0cd00');c.fillStyle=fog;c.fillRect(-110,-110,220,220);c.restore();}
   }
-  function garden(c,s,time=0,input={}){
+  function garden(c,s,time=0,input={},effects=[]){
+    const effectTime=time;
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
     loadScenery();
     if(scenery?.complete&&(scenery.naturalWidth||scenery.width)>0){
@@ -232,6 +237,16 @@
     rect(c,s.player.x+s.player.dx*30-2,s.player.y+s.player.dy*30-2,4,4,night?'#fff0b4':'#e9d595');
     if(s.attackFlash>0){const direction=Math.atan2(s.player.dy,s.player.dx),progress=1-s.attackFlash/.22,angle=direction-.7+progress*1.4;c.strokeStyle='#f4df9b9e';c.lineWidth=3;c.beginPath();c.arc(s.player.x,s.player.y,58,direction-.6,direction+.6);c.stroke();const hx=s.player.x+Math.cos(angle)*43,hy=s.player.y+Math.sin(angle)*43;c.strokeStyle='#b1905d';c.lineWidth=4;c.beginPath();c.moveTo(s.player.x,s.player.y-14);c.lineTo(hx,hy);c.stroke();rect(c,hx-6,hy-4,13,7,'#b9c5c4');rect(c,hx-6,hy-4,13,2,'#e6eae0');}
     if(s.lastAction>0){const progress=1-s.lastAction/.35;for(let i=0;i<7;i++){const x=s.player.x+s.player.dx*(27+i*4),y=s.player.y-15+s.player.dy*(27+i*4)+progress*12;rect(c,x,y,2,4,i%2?'#83c5dd':'#c9e8ed');}}
+    // Income floats above its source: amount first, followed by a spinning coin.
+    for(const effect of effects){
+      const age=effectTime-effect.born;if(age<0||age>=1.35)continue;
+      const alpha=Math.min(1,(1.35-age)/.45),rise=motion?.matches?0:age*43,cy=effect.y-22-rise;
+      c.save();c.globalAlpha=alpha;c.font='bold 13px Georgia';c.textAlign='right';
+      c.fillStyle='#23392c';c.fillText('+'+effect.amount,effect.x-8,cy+1);
+      c.fillStyle='#fff2b1';c.fillText('+'+effect.amount,effect.x-9,cy);
+      const rx=motion?.matches?5:2+Math.abs(Math.cos(age*9))*4;
+      oval(c,effect.x+1,cy-5,rx+1,7,'#6e4b22',1);oval(c,effect.x,cy-6,rx,6,'#d4a34f',1);oval(c,effect.x-1,cy-7,Math.max(1,rx-2),4,'#f7d975',1);rect(c,effect.x-1,cy-9,1,5,'#fff4b9');c.restore();
+    }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
   root.SnailArt={garden,character,sprite,get ready(){return loadScenery();}};
