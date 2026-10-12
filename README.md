@@ -1,11 +1,12 @@
 # ComputerSys Games
 
-Erste spielbare Version für **games.computersys.de**: Modern Arcade mit Pixelgrafiken, Türkis, dunklen Flächen und gut lesbarer Schrift.
+Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgrafiken, Türkis, dunklen Flächen und gut lesbarer Schrift.
 
 ## Enthalten
 
 - Responsive Startseite, Suche und Kategorien.
 - Eigene, direkt verlinkbare Spielansichten über `#spiel/neon-breakout`, `#spiel/memory-quest` und `#spiel/pixel-runner`.
+- Schneckenkampf: märchenhafte Gartenpflege, Nachtkämpfe, drei freischaltbare Gärten, Shop und lokale Spielstände. Details: [Spielkonzept und Prüfstand](docs/schneckenkampf.md).
 - Neon Breakout: 40 Blöcke, drei Leben, Maus, Touch und Tastatur.
 - Memory Quest: acht Paare, Tastaturbedienung und Bestwert nach Zügen.
 - Pixel Runner: sieben Sterne, Sprünge, Abgründe, Stacheln und Zielportal.
@@ -26,7 +27,7 @@ Der Build erzeugt `dist/index.html` als vollständige, eigenständig ausführbar
 
 ## Veröffentlichungen
 
-**Noch keine öffentliche Veröffentlichung.** Der Prüfworkflow startet bei Änderungen; der Veröffentlichungsworkflow startet ausschließlich manuell und lädt nur `dist/index.html` hoch.
+**Die Plattform ist veröffentlicht. Neue Änderungen werden nur nach Freigabe manuell veröffentlicht.** Der Prüfworkflow startet bei Änderungen; der Veröffentlichungsworkflow startet ausschließlich manuell und lädt nur `dist/index.html` hoch.
 
 GitHub-Environment **allinkl**:
 
@@ -35,9 +36,9 @@ GitHub-Environment **allinkl**:
 | Secret | FTP_HOST | ALL-INKL-Servername ohne Protokoll/Port, passend zum TLS-Zertifikat |
 | Secret | FTP_USER | Auf das Spieleverzeichnis eingeschränkter FTP-Benutzer |
 | Secret | FTP_PASSWORD | Dessen Passwort |
-| Variable | FTP_REMOTE_DIR | Explizites Zielverzeichnis aus Sicht dieses FTP-Benutzers |
+| Workflow-Einstellung | FTP_REMOTE_DIR | Bestätigtes Ziel `/`, im manuellen Workflow fest eingetragen |
 
-Wenn der eingeschränkte Benutzer bereits direkt im Verzeichnis der Subdomain startet, ist `FTP_REMOTE_DIR` gleich `/`. Andernfalls muss der im KAS bestätigte Pfad eingetragen werden. Nicht raten: Ein falscher Pfad könnte eine andere Website überschreiben.
+Der aktuelle Workflow verwendet das vom Betreiber bestätigte Ziel `/`. Bei einem Wechsel des FTP-Benutzers oder Zielverzeichnisses muss die Zuordnung vor einem erneuten Upload bestätigt werden.
 
 Vor der ersten Veröffentlichung:
 
@@ -47,7 +48,7 @@ Vor der ersten Veröffentlichung:
 4. Optional unter Environment `allinkl` einen Required Reviewer konfigurieren, damit GitHub die Freigabe zusätzlich erzwingt.
 5. Nach ausdrücklicher Freigabe **Actions → Publish to ALL-INKL → Run workflow**, Branch `main`, Bestätigung `games.computersys.de`.
 
-Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüsseltem Datenkanal. Er lädt zuerst eine temporäre Datei, kontrolliert ihre Größe und benennt sie in `index.html` um. Es gibt kein rekursives Löschen und keinen FTP-Klartext-Fallback. Danach prüft er den öffentlich ausgelieferten HTML-Inhalt über HTTPS. Secrets werden nicht in Dateien geschrieben oder ausgegeben. FTPS und das Verhalten beim Ersetzen per Rename müssen beim ersten freigegebenen Deployment am echten Server geprüft werden.
+Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüsseltem Datenkanal. Er lädt zuerst eine temporäre Datei, kontrolliert ihre Größe und benennt sie in `index.html` um. Es gibt kein rekursives Löschen und keinen FTP-Klartext-Fallback. Danach prüft er den öffentlich ausgelieferten HTML-Inhalt über HTTPS. Secrets werden nicht in Dateien geschrieben oder ausgegeben. FTPS, Ersetzen per Rename und HTTPS-Verifikation wurden beim ersten Plattform-Deployment erfolgreich geprüft.
 
 ## Wiederherstellung
 

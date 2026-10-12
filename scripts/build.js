@@ -1,14 +1,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const order = ['core.js', 'catalog.js', 'art.js', 'session.js', 'games/breakout.js', 'games/memory.js', 'games/runner.js', 'app.js'];
+const order = ['core.js', 'catalog.js', 'art.js', 'session.js', 'games/breakout.js', 'games/memory.js', 'games/runner.js', 'games/snail-model.js', 'games/snail-art.js', 'games/snail-game.js', 'app.js'];
 const html = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'src/style.css'), 'utf8');
+const css = ['style.css', 'games/snail-style.css'].map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
 const scripts = order.map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
 if (/<\/script/i.test(scripts) || /<\/style/i.test(css)) throw new Error('Unsafe inline closing tag');
 const result = html.replace('<!-- STYLES -->', () => `<style>\n${css}\n</style>`).replace('<!-- SCRIPTS -->', () => `<script>\n${scripts}\n</script>`);
 const dist = path.join(root, 'dist');
 fs.mkdirSync(dist, { recursive: true });
 fs.writeFileSync(path.join(dist, 'index.html'), result);
+fs.writeFileSync(path.join(dist, 'schneckenkampf.html'), result.replace('<body>', '<body><script>if(!location.hash)location.hash="spiel/schneckenkampf";</script>'));
 fs.writeFileSync(path.join(dist, '.htaccess'), 'DirectoryIndex index.html\nOptions -Indexes\n<IfModule mod_headers.c>\nHeader set X-Content-Type-Options "nosniff"\nHeader set Referrer-Policy "strict-origin-when-cross-origin"\n</IfModule>\n');
 console.log(`Built dist/index.html (${Buffer.byteLength(result)} bytes). No runtime dependencies.`);
