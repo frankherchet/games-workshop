@@ -70,3 +70,39 @@
 @media (prefers-reduced-motion:reduce) {
   .pz * {transition:none!important;scroll-behavior:auto!important}
 }
+
+/* Horse selection in Pferdezauber v2 */
+.pz-entry-card {width:min(740px,100%);max-width:740px;max-height:100%;overflow-y:auto;overscroll-behavior:contain}
+.pz-entry .pz-section-title {font-size:17px;letter-spacing:.1px;color:#eaf3d6;margin:10px 0}
+.pz-entry .pz-choice {margin:14px 0}
+.pz-choice button[aria-pressed="true"] {outline:3px solid #fbec9f;outline-offset:2px;box-shadow:0 0 0 4px #17352e}
+.pz-horses {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:10px auto;max-width:590px}
+.pz-horse {min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid #59877b;background:#23463e;color:#f4fff3;border-radius:13px;padding:10px 6px;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.pz-horse:hover {border-color:#f6e6a2;background:#30594d}
+.pz-horse[aria-pressed="true"] {border-color:#fbe7a5;background:#315b4b;box-shadow:0 0 0 2px #fbe7a566}
+.pz-horse-swatch {width:41px;height:42px;position:relative;display:block;margin:1px auto 4px}
+.pz-horse-swatch::before {content:'';position:absolute;top:0;left:8px;width:26px;height:28px;border-radius:48% 48% 40% 40%;background:var(--pz-coat);box-shadow:inset -6px -1px #1113,0 1px 1px #0006}
+.pz-horse-swatch::after {content:'';position:absolute;top:-5px;left:10px;width:21px;height:11px;border-radius:40% 60% 8% 5%;background:var(--pz-mane);transform:rotate(-13deg)}
+.pz-horse-face {position:absolute;z-index:1;top:15px;left:14px;width:4px;height:4px;background:#1c2927;border-radius:100%;box-shadow:12px 0 #1c2927,6px 16px #d8b7a9}
+.pz-horse-name {font-size:12px;font-weight:750;line-height:1.1;text-align:center}
+.pz-horse small {font-size:10px;color:#bee0c8}
+.pz-entry .pz-selected {color:#f7e8a9;font-size:12px;font-weight:650;min-height:21px;margin:8px 0}
+.pz-start {display:block;width:min(100%,300px);margin:8px auto 13px;padding:12px 20px;border:0;border-radius:13px;background:#f9e7a0;color:#263f33;font-weight:850;font-size:15px;box-shadow:0 5px 0 #7d7752}
+.pz-start:hover {filter:brightness(1.07);transform:translateY(-1px)}
+.pz-start:focus-visible {outline:3px solid white;outline-offset:3px}
+@media(max-width:700px) {
+  .pz-entry {align-items:start;padding:10px 8px}
+  .pz-entry-card {max-width:100%;max-height:none;padding:12px}
+  .pz-entry h1 {font-size:30px;margin:5px 0}
+  .pz-entry .pz-section-title {font-size:14px;margin:8px 0}
+  .pz-entry .pz-choice {grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+  .pz-choice button {padding:8px 5px;font-size:12px;line-height:1.25}
+  .pz-choice small {font-size:9px}
+  .pz-horses {gap:6px;margin:7px 0}
+  .pz-horse {padding:7px 3px}
+  .pz-horse-swatch {transform:scale(.81);margin:0}
+  .pz-horse-name {font-size:11px}
+  .pz-horse small {font-size:9px}
+  .pz-start {padding:9px 16px;font-size:13px;margin:6px auto 10px}
+  .pz-hud-breed {display:none}
+}
