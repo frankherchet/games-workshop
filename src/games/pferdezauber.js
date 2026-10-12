@@ -16,7 +16,7 @@
   ]);
   const HORSES = Object.fromEntries(HORSE_CATALOG.map(h => [h.id,h]));
   const DEFAULT_HORSE = 'haflinger';
-  function horseById(id) { return HORSES[id] || HORSES[DEFAULT_HORSE]; }
+  function horseById(id) { return Object.prototype.hasOwnProperty.call(HORSES,id) ? HORSES[id] : HORSES[DEFAULT_HORSE]; }
   function newState(mode, horseId=DEFAULT_HORSE) {
     return {
       mode: MODES.includes(mode) ? mode : 'duo',
@@ -137,7 +137,7 @@
       const mode = event.target.closest('[data-mode]');
       if (mode && MODES.includes(mode.dataset.mode)) { selectedMode = mode.dataset.mode; updateSelection(); return; }
       const horse = event.target.closest('[data-horse]');
-      if (horse && HORSES[horse.dataset.horse]) { selectedHorseId = horse.dataset.horse; updateSelection(); return; }
+      if (horse && Object.prototype.hasOwnProperty.call(HORSES,horse.dataset.horse)) { selectedHorseId = horse.dataset.horse; updateSelection(); return; }
       if (event.target.closest('[data-start]')) { reset(selectedMode); return; }
       const button = event.target.closest('[data-act]');
       if (button) action(button.dataset.act);
