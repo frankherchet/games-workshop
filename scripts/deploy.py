@@ -1,6 +1,8 @@
 """Publish the standalone page using explicit FTPS. Credentials never enter files."""
 import ftplib
 import hashlib
+import json
+import re
 import os
 import ssl
 import sys
@@ -29,17 +31,57 @@ def configuration(env):
     return remote, site.rstrip('/') + '/'
 
 
-def upload(ftp, remote, page, release):
-    # No recursive mirroring or deletion: only the platform's own index.html.
-    ftp.cwd(remote)
-    temp = f'.games-{release}.html.tmp'
-    with page.open('rb') as stream:
-        ftp.storbinary('STOR ' + temp, stream)
-    if ftp.size(temp) != page.stat().st_size:
+def assets_for(dist):
+    manifest = json.loads((dist / 'assets-manifest.json').read_text())
+    if not isinstance(manifest, list) or not manifest or len(manifest) > 20 or len(set(manifest)) != len(manifest):
+        raise ValueError('Invalid asset manifest.')
+    assets = []
+    for name in manifest:
+        if not isinstance(name, str) or not re.fullmatch(r'assets/garden-fine-[a-f0-9]{12}\.png', name):
+            raise ValueError('Unsupported asset path.')
+        asset = dist / name
+        if not asset.is_file() or asset.is_symlink() or asset.resolve().parent != (dist / 'assets').resolve():
+            raise ValueError('Missing or unsafe asset.')
+        if hashlib.sha256(asset.read_bytes()).hexdigest()[:12] != asset.stem.removeprefix('garden-fine-'):
+            raise ValueError('Asset content hash does not match its filename.')
+        assets.append(asset)
+    return assets
+
+
+def upload_file(ftp, source, target, temporary):
+    with source.open('rb') as stream:
+        ftp.storbinary('STOR ' + temporary, stream)
+    if ftp.size(temporary) != source.stat().st_size:
         raise RuntimeError('Uploaded file size does not match.')
-    # Rename publishes the complete file. If the server cannot replace index.html,
-    # fail instead of deleting the existing page first.
-    ftp.rename(temp, 'index.html')
+    ftp.rename(temporary, target)
+
+
+def upload(ftp, remote, page, release, assets=()):
+    # Publish assets first and index last. Preserve old assets for rollback.
+    ftp.cwd(remote)
+    if assets:
+        try:
+            ftp.cwd('assets')
+        except ftplib.error_perm as error:
+            if not str(error).startswith('550'):
+                raise
+            ftp.mkd('assets')
+            ftp.cwd('assets')
+        for asset in assets:
+            upload_file(ftp, asset, asset.name, f'.games-{release}-{asset.name}.tmp')
+        ftp.cwd(remote)
+    upload_file(ftp, page, 'index.html', f'.games-{release}.html.tmp')
+
+
+def verify_file(site, relative, source, release, context):
+    request = Request(site + relative + '?release=' + release, headers={'Cache-Control': 'no-cache'})
+    with urlopen(request, timeout=30, context=context) as response:
+        parsed = urlparse(response.url)
+        if parsed.scheme != 'https' or parsed.hostname != 'games.computersys.de':
+            raise RuntimeError('Website redirects to an unexpected location.')
+        live = response.read()
+    if hashlib.sha256(live).digest() != hashlib.sha256(source.read_bytes()).digest():
+        raise RuntimeError('HTTPS content verification does not match the build.')
 
 
 def main():
@@ -47,6 +89,7 @@ def main():
     page = Path('dist/index.html')
     if not page.is_file():
         raise ValueError('Build the page before deploying.')
+    assets = assets_for(page.parent)
     release = uuid.uuid4().hex
     context = ssl.create_default_context()
     with ftplib.FTP_TLS(context=context, timeout=30) as ftp:
@@ -55,14 +98,10 @@ def main():
         ftp.prot_p()
         ftp.set_pasv(True)
         ftp.voidcmd('TYPE I')
-        upload(ftp, remote, page, release)
-    request = Request(site + '?release=' + release, headers={'Cache-Control': 'no-cache'})
-    with urlopen(request, timeout=30, context=context) as response:
-        if urlparse(response.url).hostname != 'games.computersys.de':
-            raise RuntimeError('Website redirects to an unexpected host.')
-        live = response.read()
-    if hashlib.sha256(live).digest() != hashlib.sha256(page.read_bytes()).digest():
-        raise RuntimeError('Upload completed, but HTTPS verification does not match the build. Check the subdomain directory and caching.')
+        upload(ftp, remote, page, release, assets)
+    for asset in assets:
+        verify_file(site, 'assets/' + asset.name, asset, release, context)
+    verify_file(site, '', page, release, context)
     print('FTPS upload and HTTPS content verification succeeded.')
 
 

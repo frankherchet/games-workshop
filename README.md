@@ -24,7 +24,7 @@ npm run build
 npm run check
 ```
 
-Der Build erzeugt `dist/index.html` als vollständige, eigenständig ausführbare Webseite. Diese Datei kann als lokale Vorschau geöffnet oder auf den Webspace geladen werden. JavaScript-Quellen bleiben in `src/` getrennt; der Build fügt sie zusammen. `.htaccess` wird zusätzlich vorbereitet, vom Deployment jedoch nicht übertragen, damit bestehende Hostingeinstellungen erhalten bleiben.
+Der Build erzeugt `dist/index.html` mit zusammengefügtem Code und einer lokal gehosteten PNG-Grafik in `dist/assets/`. Für die Veröffentlichung müssen beide übertragen werden. `dist/schneckenkampf.html` enthält die Grafik eingebettet und dient als eigenständige Vorschau. JavaScript-Quellen bleiben in `src/` getrennt; der Build fügt sie zusammen. `.htaccess` wird zusätzlich vorbereitet, vom Deployment jedoch nicht übertragen, damit bestehende Hostingeinstellungen erhalten bleiben.
 
 ## Veröffentlichungen
 
@@ -49,7 +49,7 @@ Vor der ersten Veröffentlichung:
 4. Optional unter Environment `allinkl` einen Required Reviewer konfigurieren, damit GitHub die Freigabe zusätzlich erzwingt.
 5. Nach ausdrücklicher Freigabe **Actions → Publish to ALL-INKL → Run workflow**, Branch `main`, Bestätigung `games.computersys.de`.
 
-Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüsseltem Datenkanal. Er lädt zuerst eine temporäre Datei, kontrolliert ihre Größe und benennt sie in `index.html` um. Es gibt kein rekursives Löschen und keinen FTP-Klartext-Fallback. Danach prüft er den öffentlich ausgelieferten HTML-Inhalt über HTTPS. Secrets werden nicht in Dateien geschrieben oder ausgegeben. FTPS, Ersetzen per Rename und HTTPS-Verifikation wurden beim ersten Plattform-Deployment erfolgreich geprüft.
+Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüsseltem Datenkanal. Er lädt zuerst die im Manifest aufgeführten, mit Inhalts-Hash benannten Grafiken und zuletzt `index.html`. Jede Datei wird temporär übertragen, auf ihre Größe geprüft und per Rename veröffentlicht. Alte Grafiken bleiben für einen möglichen Rollback erhalten. Es gibt kein rekursives Löschen und keinen FTP-Klartext-Fallback. Danach prüft er die öffentlich ausgelieferten HTML- und Bildinhalte über HTTPS. Secrets werden nicht in Dateien geschrieben oder ausgegeben. FTPS, Ersetzen per Rename und HTTPS-Verifikation wurden beim ersten Plattform-Deployment erfolgreich geprüft.
 
 ## Wiederherstellung
 

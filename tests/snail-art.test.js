@@ -38,3 +38,16 @@ test('Reduced-motion preference freezes the decorative animation',()=>{
   const sandbox={SnailModel:M,matchMedia:()=>({matches:true})};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
   const s=scene(0,'fox',true),a=canvas(),b=canvas();sandbox.SnailArt.garden(a.ctx,s,0,{x:1});sandbox.SnailArt.garden(b.ctx,s,5,{x:1});assert.equal(a.result().hash,b.result().hash);
 });
+test('Detailed scenery loads once, draws behind gameplay and preserves game state',async()=>{
+  let loads=0,draws=0;
+  class Image{constructor(){this.width=1536;this.height=1024;this.naturalWidth=1536;this.complete=false;}set src(value){assert.equal(value,'local.png');loads++;this.complete=true;this.onload();}}
+  const sandbox={SnailModel:M,Image,SnailAssets:{garden:'local.png'}};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
+  assert.equal(loads,0);assert.equal(await sandbox.SnailArt.ready,true);assert.equal(await sandbox.SnailArt.ready,true);assert.equal(loads,1);
+  const s=scene(1,'fox',true),before=JSON.stringify(s),c=canvas();Object.assign(c.ctx,{rect(){},clip(){},drawImage(){draws++;}});
+  sandbox.SnailArt.garden(c.ctx,s,2,{x:1});c.result();assert.ok(draws>=4);assert.equal(JSON.stringify(s),before);
+});
+test('A failed scenery request falls back to procedural art',async()=>{
+  class Image{set src(value){this.complete=false;this.onerror();}}
+  const sandbox={SnailModel:M,Image,SnailAssets:{garden:'missing.png'}};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
+  assert.equal(await sandbox.SnailArt.ready,false);const c=canvas();sandbox.SnailArt.garden(c.ctx,scene(0,'gardener',false),0);assert.ok(c.result().count>4000);
+});

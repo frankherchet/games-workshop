@@ -1,6 +1,13 @@
 (function(root) {
   'use strict';
   const M=root.SnailModel, terrainCache=new Map();
+  let scenery=null,sceneryReady=null;
+  function loadScenery(){
+    if(sceneryReady)return sceneryReady;
+    if(!root.Image||!root.SnailAssets?.garden)return Promise.resolve(false);
+    sceneryReady=new Promise(resolve=>{scenery=new root.Image();scenery.onload=()=>resolve(true);scenery.onerror=()=>resolve(false);scenery.src=root.SnailAssets.garden;});
+    return sceneryReady;
+  }
   const motion=root.matchMedia?.('(prefers-reduced-motion: reduce)');
   const palettes={'.':null,h:'#49382f',s:'#e9bfa0',d:'#bf866b',g:'#455d4a',G:'#739264',b:'#3d6573',B:'#78a2aa',y:'#d5ae65',Y:'#fae2a0',o:'#ba6537',O:'#f0a663',k:'#26353b',w:'#f3e6cb',p:'#c583a2'};
   const person=['.....hhhhhh.....','....hyyyyyyh....','...hyyyyyyyyh...','..yyyyyyyyyyyy..','.....ssssss.....','.....skssks.....','.....ssssss.....','......sdds......','....GGbbbbGG....','...sGGbBBbGGs...','...sGGbbbbGGs...','...sGGbbbbGGs...','....GGbbbbGG....','.....bbbbbb.....','.....bb..bb.....','.....bb..bb.....','.....kk..kk.....'];
@@ -16,6 +23,16 @@
   }
   function sparkle(c,x,y,size,color){rect(c,x-size,y-1,size*2+2,2,color);rect(c,x-1,y-size,2,size*2+2,color);}
   function sprite(c,pattern,x,y,scale=2,palette=palettes){pattern.forEach((row,py)=>[...row].forEach((char,px)=>{if(palette[char])rect(c,x+px*scale,y+py*scale,scale,scale,palette[char]);}));}
+  const shadeCache=new Map();
+  function shade(color,amount){const key=color+':'+amount;if(shadeCache.has(key))return shadeCache.get(key);const value=parseInt(color.slice(1),16),parts=[value>>16,(value>>8)&255,value&255].map(n=>Math.max(0,Math.min(255,n+amount)));const result='#'+parts.map(n=>n.toString(16).padStart(2,'0')).join('');shadeCache.set(key,result);return result;}
+  function fineSprite(c,pattern,x,y){
+    for(let py=0;py<pattern.length*2;py++)for(let px=0;px<32;px++){
+      const row=Math.floor(py/2),col=Math.floor(px/2),char=pattern[row]?.[col],base=palettes[char];if(!base)continue;
+      const edge=!palettes[pattern[row]?.[col+1]],light=!palettes[pattern[row-1]?.[col]],texture=(px*3+py*7)%5;
+      const amount=edge&&px%2? -18 :light&&py%2===0?17:texture===0?8:texture===1?-5:0;
+      c.fillStyle=shade(base,amount);c.fillRect(x+px*1.5,y+py*1.5,1.5,1.5);
+    }
+  }
 
   function ground(c,level){
     const colors=[['#759448','#7c9d4f','#839f51','#6c8b44','#829b53','#708f4a'],['#50744b','#5a7c4f','#648754','#466b47','#5d7a50','#6a8658'],['#6d8b60','#77946a','#829970','#627e58','#748d65','#7e956d']][level];
@@ -88,6 +105,12 @@
     if(!p.unlocked){rect(c,x-27,y-27,54,54,'#344f3322');for(let i=0;i<4;i++)rect(c,x-24+i*15,y-25,5,2,'#c3ce9355');c.fillStyle='#dfdaa36b';c.font='16px monospace';c.textAlign='center';c.fillText('+',x,y+6);return;}
     rect(c,x-29,y-28,58,58,'#5b4934');rect(c,x-27,y-26,54,53,p.watered?'#795637':'#997346');rect(c,x-27,y-26,54,3,p.watered?'#967049':'#b28c59');
     for(let i=0;i<22;i++){const px=x-23+hash(i,x)*46,py=y-20+hash(i,y)*44;rect(c,px,py,2+hash(i,7)*3,1,i%2?'#442e2b40':'#dfb88350');}for(let i=0;i<4;i++)rect(c,x-23,y-17+i*11,45,1,'#4c382d33');
+    // Fine earth grains, grass edging and tiny roots connect plots to the landscape.
+    for(let i=0;i<150;i++){
+      const gx=x-25+hash(i+75,x)*50,gy=y-23+hash(i+51,y)*48;
+      rect(c,gx,gy,1+(i%7===0?1:0),1,[p.watered?'#64452f':'#8c673e','#b3976155','#4b392e66','#d6b68144'][i%4]);
+    }
+    for(let i=0;i<16;i++){const gx=x-28+i*3.6,gy=y+28+(i%3);rect(c,gx,gy-2-(i%4),1,3+i%4,i%2?'#5f814a':'#91a75d');}
     if(!p.type){rect(c,x-8,y-2,16,2,'#d4b384');rect(c,x-1,y-8,2,15,'#d4b384');return;}
     const plant=M.PLANTS[p.type],dry=p.dry>0,weak=p.hp<plant.hp*.5,bend=Math.round(Math.sin(time*1.2+x*.01)*(dry?1:2)),fy=y-20+(dry?6:0),fx=x+bend;
     rect(c,x-2,y-17,4,33,dry?'#85744c':'#3a7042');rect(c,x,y-17,1,30,dry?'#b3a16c':'#7aa962');
@@ -103,6 +126,16 @@
     }else{
       oval(c,fx,fy,14,12,dry?'#927e83':'#487b9c',2);oval(c,fx-2,fy-3,11,9,petals,2);oval(c,fx+2,fy+1,7,6,dry?'#bcaa99':'#78bfc7',2);oval(c,fx,fy-1,4,4,dry?'#cebea4':'#d6f3ef',2);rect(c,fx-9,fy-7,6,2,'#e6f8ed');rect(c,fx+7,fy+2,2,5,'#39758b');
     }
+    // Veins, pollen and petal highlights use individual logical pixels.
+    const petalCount=p.type==='daisy'?8:p.type==='moon'?5:0;
+    for(let i=0;i<petalCount;i++){
+      const angle=i*Math.PI*2/petalCount-(p.type==='moon'?.3:0),px=fx+Math.cos(angle)*9,py=fy+Math.sin(angle)*9;
+      for(let j=0;j<5;j++)rect(c,px-3+j,py-2+(j%2),1,1,dry?'#eed3ad':'#fff7e5');
+      rect(c,px+2,py+2,1,2,dry?'#a68b69':shade(plant.color,-30));
+    }
+    for(let i=0;i<7;i++){rect(c,x-1,y-13+i*4,1,1,dry?'#b49c66':'#9db778');}
+    if(p.type==='tulip')for(let i=0;i<5;i++){rect(c,fx-6+i*3,fy-8+(i%2),1,7,'#ffe4e266');rect(c,fx-8+i*4,fy+3,1,2,'#934868');}
+    if(p.type==='crystal')for(let i=0;i<6;i++){const angle=i*Math.PI/3;rect(c,fx+Math.cos(angle)*7,fy+Math.sin(angle)*5,2,1,'#edfdf1');}
     if(p.watered){rect(c,x+19,y+14,4,7,'#61b6d3');rect(c,x+20,y+12,2,3,'#a8e9ed');rect(c,x-17,y+15,5,1,'#c3e7e77a');}
     if((p.type==='moon'||p.type==='crystal')&&night){const light=Math.max(.15,.5+Math.sin(time*1.5+x)*.2);c.globalAlpha=light;sparkle(c,fx+19,fy-12,2,'#d9ecff');c.globalAlpha=1;}
     rect(c,x-15,y+23,30,3,'#3a4130');rect(c,x-15,y+23,30*p.hp/plant.hp,3,weak?'#dd9b7a':'#a7c980');
@@ -114,12 +147,15 @@
     oval(c,x,y+2,21,6,'#102e303b');
     if(type==='fox'){const sway=Math.round(Math.sin(time*3.5)*3);rect(c,x+15,y-24+sway,17,8,'#b56636');rect(c,x+28,y-31+sway,8,12,'#df9855');rect(c,x+29,y-31+sway,7,5,'#f0dfbd');rect(c,x+18,y-23+sway,8,2,'#edb775');}
     const pattern=type==='fox'?fox:type==='gardeneress'?woman:person;
-    sprite(c,pattern.slice(0,13),x-24,y-51-bob,3);
+    fineSprite(c,pattern.slice(0,13),x-24,y-51-bob);
     // Alternating steps and swinging arms, rather than moving the whole sprite up and down.
     for(let leg=0;leg<2;leg++){const offset=moving?Math.round(walk*(leg?3:-3)):0,lx=x+(leg?3:-12);rect(c,lx,y-12,9,10+offset,'#3d6573');rect(c,lx+1,y-12,2,9+offset,'#719aa2');rect(c,lx-1,y-3+offset,11,5,'#26353b');rect(c,lx,y-3+offset,7,1,'#52605d');}
     for(let side of [-1,1]){const offset=moving?Math.round(walk*side*3):0;rect(c,x+side*19-2,y-22+offset,5,8,type==='fox'?'#e4a061':'#e5b494');rect(c,x+side*19-1,y-21+offset,2,3,type==='fox'?'#f5c189':'#f4d0ae');}
     rect(c,x-8,y-48-bob,16,2,'#f6d992');rect(c,x-14,y-44-bob,27,1,'#f2d493');rect(c,x-14,y-42-bob,25,2,'#a4804d');
     rect(c,x-8,y-22-bob,7,7,'#78a2aa');rect(c,x-7,y-21-bob,5,1,'#a9c2bc');rect(c,x+4,y-28-bob,2,2,'#d4bf88');rect(c,x-13,y-13,26,2,'#675444');
+    // A leaf charm, stitched cuffs and a tiny sash keep the garden figures folkloric.
+    rect(c,x-16,y-27-bob,3,9,'#98ad75');rect(c,x+14,y-27-bob,3,9,'#98ad75');rect(c,x-3,y-26-bob,1,5,'#d8bc77');
+    oval(c,x-2,y-20-bob,2,3,'#d5cb8a',1);rect(c,x-2,y-22-bob,1,2,'#fff0bb');rect(c,x+10,y-12,2,9,'#b99170');
     if(direction.dy<-.45){rect(c,x-8,y-38-bob,20,15,type==='fox'?'#e99f5b':type==='gardeneress'?'#765445':'#b58e63');rect(c,x-6,y-38-bob,14,2,type==='fox'?'#f3b477':'#c3a179');}
     else if((time+x*.003)%4.7<.12){rect(c,x-7,y-35-bob,3,2,type==='fox'?'#eda464':'#e4b89b');rect(c,x+6,y-35-bob,3,2,type==='fox'?'#eda464':'#e4b89b');}
     if(pose.water){const cx=x+direction.dx*21,cy=y-19+direction.dy*12;rect(c,cx-8,cy-5,15,11,'#658f99');rect(c,cx-6,cy-4,10,2,'#a8ccd0');rect(c,cx+6,cy-3,10,3,'#729da6');rect(c,cx-10,cy-8,3,8,'#416772');}
@@ -177,7 +213,18 @@
   }
   function garden(c,s,time=0,input={}){
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
-    drawGround(c,s.level);pond(c,time);trees.forEach(([x,y],i)=>tree(c,x,y,s.level,time,i));bushes(c,time);architecture(c,s.level,time);
+    loadScenery();
+    if(scenery?.complete&&(scenery.naturalWidth||scenery.width)>0){
+      c.drawImage(scenery,0,0,960,640);
+      // Subtle clipped movements in the existing canopy retain the detailed painting.
+      const ratio=(scenery.naturalWidth||scenery.width)/960;
+      for(const [i,r]of [[0,[0,0,120,135]],[1,[440,0,210,120]],[2,[880,335,80,160]]]){
+        const [x,y,w,h]=r,wind=Math.sin(time*.8+i)*1.1;c.save();c.beginPath();c.rect(x,y,w,h);c.clip();c.drawImage(scenery,x*ratio,y*ratio,w*ratio,h*ratio,x+wind,y,w,h);c.restore();
+      }
+      if(s.level===1){rect(c,0,0,960,640,'#153d3524');for(let i=0;i<10;i++){const x=100+i*70,y=126+(i%3)*9;rect(c,x,y,3,10,'#c8bca0');oval(c,x+1,y-1,7,4,'#bd94c7',1);}}
+      if(s.level===2){rect(c,0,0,960,640,'#6b76951a');for(let i=0;i<14;i++){rect(c,290+i*25,30,23,13,i%2?'#8c9990':'#b0b5a2');rect(c,292+i*25,32,19,1,'#d7d8bd');}}
+      for(let i=0;i<4;i++)rect(c,132+i*20+Math.sin(time*.6+i)*3,67+(i%2)*13,10,1,'#d5edda66');
+    }else{drawGround(c,s.level);pond(c,time);trees.forEach(([x,y],i)=>tree(c,x,y,s.level,time,i));bushes(c,time);architecture(c,s.level,time);}
     for(const p of s.plots)flower(c,p,time,night);for(const t of s.structures)structure(c,t,time);
     atmosphere(c,s,time);
     for(const n of s.snails)snail(c,n,time,night);
@@ -187,5 +234,5 @@
     if(s.lastAction>0){const progress=1-s.lastAction/.35;for(let i=0;i<7;i++){const x=s.player.x+s.player.dx*(27+i*4),y=s.player.y-15+s.player.dy*(27+i*4)+progress*12;rect(c,x,y,2,4,i%2?'#83c5dd':'#c9e8ed');}}
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,character,sprite};
+  root.SnailArt={garden,character,sprite,get ready(){return loadScenery();}};
 })(globalThis);

@@ -29,7 +29,10 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: published-games-${{ github.sha }}-${{ github.run_id }}
-          path: dist/index.html
+          path: |
+            dist/index.html
+            dist/assets/
+            dist/assets-manifest.json
           retention-days: 90
       - name: Publish via explicit FTPS and verify HTTPS
         env:
