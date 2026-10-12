@@ -1,4 +1,5 @@
 name: One-time Pferdezauber v2 isolated preview
+# Validated runtime-generated horse catalogue on second attempt; isolated upload only.
 on:
   push:
     branches: [feature/pferdezauber-3d-prototyp]
