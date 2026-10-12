@@ -5,11 +5,23 @@
   // Node.js is needed to play it on the ALL-INKL webspace.
   const MODES = ['duo', 'horseOnly'];
   const SPEEDS = [2.7, 4.4, 6.6];
-  function newState(mode) {
+  // Procedurally drawn horse variants; no external models or network requests.
+  const HORSE_CATALOG = Object.freeze([
+    { id:'foal-brown', name:'Braunes Fohlen', group:'Fohlen', detail:'Neugierig und verspielt', size:0.57, speed:0.79, coat:[.62,.35,.22], mane:[.30,.19,.16], muzzle:[.75,.56,.48], foal:true },
+    { id:'foal-black', name:'Schwarzes Fohlen', group:'Fohlen', detail:'Kleiner Wirbelwind', size:0.60, speed:0.81, coat:[.20,.22,.26], mane:[.11,.13,.17], muzzle:[.38,.37,.39], foal:true },
+    { id:'shetland', name:'Shetlandpony', group:'Ponys', detail:'Klein und kompakt', size:0.70, speed:0.87, coat:[.55,.35,.22], mane:[.22,.17,.14], muzzle:[.70,.54,.42], pony:true },
+    { id:'welsh', name:'Welsh-Pony', group:'Ponys', detail:'Flink mit hellem Fell', size:0.83, speed:0.94, coat:[.78,.78,.72], mane:[.57,.55,.51], muzzle:[.83,.79,.75], pony:true },
+    { id:'haflinger', name:'Haflinger', group:'Großpferde', detail:'Goldfuchs mit heller Mähne', size:1.00, speed:1.00, coat:[.82,.54,.27], mane:[.96,.84,.58], muzzle:[.91,.75,.60] },
+    { id:'friesian', name:'Friese', group:'Großpferde', detail:'Groß und elegant in Schwarz', size:1.16, speed:1.05, coat:[.17,.21,.25], mane:[.09,.12,.15], muzzle:[.30,.32,.35] }
+  ]);
+  const HORSES = Object.fromEntries(HORSE_CATALOG.map(h => [h.id,h]));
+  const DEFAULT_HORSE = 'haflinger';
+  function horseById(id) { return HORSES[id] || HORSES[DEFAULT_HORSE]; }
+  function newState(mode, horseId=DEFAULT_HORSE) {
     return {
       mode: MODES.includes(mode) ? mode : 'duo',
-      player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', jump: 0, walk: 0 },
-      companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', jump: 0, walk: 0 },
+      player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, jump: 0, walk: 0 },
+      companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', horseId: horseById(horseId).id, jump: 0, walk: 0 },
       active: 'player', gait: 0, following: true, stars: [false, false, false],
     };
   }
@@ -24,21 +36,31 @@
     return true;
   }
   function collected(s) { return s.stars.filter(Boolean).length; }
-  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected };
+  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG };
 
   root.Arcade.games.pferdezauber = function ({ host }) {
+    const horseCards = HORSE_CATALOG.map(h => {
+      const rgb = color => 'rgb(' + color.map(v=>Math.round(v*255)).join(',') + ')';
+      return '<button type="button" class="pz-horse" data-horse="' + h.id + '" aria-pressed="' + (h.id === DEFAULT_HORSE) + '">' +
+        '<span class="pz-horse-swatch" style="--pz-coat:' + rgb(h.coat) + ';--pz-mane:' + rgb(h.mane) + '" aria-hidden="true"><span class="pz-horse-face"></span></span>' +
+        '<span class="pz-horse-name">' + h.name + '</span><small>' + h.group + '</small></button>';
+    }).join('');
     const html = [
       '<div class="pz">',
       ' <div class="pz-top"><a href="#alle" class="pz-back">← Zur Spieleübersicht</a><div><span class="pz-spark">✦</span> PFERDEZAUBER <small>3D-Spielwiese · Prototyp</small></div></div>',
       ' <div class="pz-scene">',
       '  <canvas class="pz-canvas" aria-label="Dreidimensionale Pferdewiese. Nutze Tastatur oder die Schaltflächen zur Steuerung."></canvas>',
-      '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtfunken</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div></div>',
+      '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtfunken</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div><div class="pz-hudcard pz-hud-breed"><span>Dein Pferd</span><b data-breed>Haflinger</b></div></div>',
       '  <div class="pz-notice" role="status" aria-live="polite" data-notice>Willkommen im Tal der Wandelwinde!</div>',
       '  <div class="pz-pad" aria-label="Bewegen"><button data-move="up" aria-label="Vorwärts">▲</button><div><button data-move="left" aria-label="Nach links">◀</button><button data-move="down" aria-label="Rückwärts">▼</button><button data-move="right" aria-label="Nach rechts">▶</button></div></div>',
       '  <div class="pz-actions"><button data-act="switch" title="Figur wechseln (Q)">⇄ <span>Wechseln</span></button><button data-act="transform" title="Verwandeln (T)">✦ <span>Verwandeln</span></button><button data-act="gait" title="Gangart (G)">♞ <span>Schritt</span></button><button data-act="jump" title="Springen (Leertaste)">↥ <span>Springen</span></button></div>',
-      '  <div class="pz-entry" data-entry><div class="pz-entry-card"><span class="pz-eyebrow">WILLKOMMEN IN DEINER WELT</span><h1>Pferdezauber</h1><p>Laufe über grüne Wiesen, entdecke drei Lichtfunken und wechsle zwischen Mensch und Pferd.</p>',
-      '   <div class="pz-choice"><button data-mode="duo">🐴 Mensch + Pferd <small>Begleiter, Figurenwechsel & Verwandlung</small></button><button data-mode="horseOnly">🐎 Nur Pferd <small>Die Welt auf vier Hufen entdecken</small></button></div>',
-      '   <p class="pz-note">Kostenlose 3D-Demo · kein Konto · kein Online-Spielstand · keine externen Inhalte</p>',
+      '  <div class="pz-entry" data-entry><div class="pz-entry-card"><span class="pz-eyebrow">DEIN ABENTEUER BEGINNT</span><h1>Pferdezauber</h1><p>Wie möchtest du spielen? Wähle danach dein Lieblingspferd!</p>',
+      '   <div class="pz-choice" role="group" aria-label="Spielmodus"><button data-mode="duo" aria-pressed="true">🐴 Mensch + Pferd <small>Begleiter, Figurenwechsel & Verwandlung</small></button><button data-mode="horseOnly" aria-pressed="false">🐎 Nur Pferd <small>Die Welt auf vier Hufen entdecken</small></button></div>',
+      '   <h2 class="pz-section-title">Wähle dein Pferd</h2>',
+      '   <div class="pz-horses" role="group" aria-label="Fohlen, Ponys und Pferde">',horseCards,'   </div>',
+      '   <p class="pz-selected" data-selection>Haflinger · Goldfuchs mit heller Mähne</p>',
+      '   <button type="button" class="pz-start" data-start>✨ Abenteuer starten →</button>',
+      '   <p class="pz-note">Kostenlose 3D-Demo · kein Konto · noch keine Spielstand-Speicherung · keine externen Inhalte</p>',
       '  </div></div>',
       '  <div class="pz-error" data-error hidden></div>',
       ' </div>',
@@ -56,7 +78,10 @@
     const error = shell.querySelector('[data-error]');
     const starText = shell.querySelector('[data-stars]');
     const activeText = shell.querySelector('[data-active]');
+    const breedText = shell.querySelector('[data-breed]');
+    const selectionText = shell.querySelector('[data-selection]');
     const keys = new Set();
+    let selectedMode = 'duo', selectedHorseId = DEFAULT_HORSE;
     let state = newState('duo'), started = false, alive = true, raf = 0, last = 0, noticeUntil = 0;
     let cameraYaw = 0.18, camX = 0, camZ = 0, dragging = null;
     const stars = [{ x: 5, z: 5 }, { x: -8, z: 8 }, { x: 13, z: -10 }];
@@ -67,7 +92,7 @@
       noticeUntil = performance.now() + 3800;
     }
     function reset(mode) {
-      state = newState(mode);
+      state = newState(mode, selectedHorseId);
       cameraYaw = 0.18; camX = state.player.x; camZ = state.player.z;
       started = true; entry.hidden = true;
       keys.clear(); updateHud();
@@ -75,6 +100,7 @@
     }
     function updateHud() {
       starText.textContent = collected(state) + ' / 3';
+      breedText.textContent = horseById(state.companion.horseId).name;
       const controlled = state.active === 'player' ? state.player : state.companion;
       activeText.textContent = state.active === 'companion' ? 'Begleitpferd' :
         controlled.form === 'human' ? 'Mensch' : state.mode === 'horseOnly' ? 'Dein Pferd' : 'Zauberpferd';
@@ -99,9 +125,20 @@
       }
       updateHud();
     }
+    function updateSelection() {
+      shell.querySelectorAll('[data-mode]').forEach(button =>
+        button.setAttribute('aria-pressed', String(button.dataset.mode === selectedMode)));
+      shell.querySelectorAll('[data-horse]').forEach(button =>
+        button.setAttribute('aria-pressed', String(button.dataset.horse === selectedHorseId)));
+      const chosen = horseById(selectedHorseId);
+      selectionText.textContent = chosen.name + ' · ' + chosen.detail + (chosen.foal ? ' · Nicht reitbar' : '');
+    }
     function onClick(event) {
       const mode = event.target.closest('[data-mode]');
-      if (mode) { reset(mode.dataset.mode); return; }
+      if (mode && MODES.includes(mode.dataset.mode)) { selectedMode = mode.dataset.mode; updateSelection(); return; }
+      const horse = event.target.closest('[data-horse]');
+      if (horse && HORSES[horse.dataset.horse]) { selectedHorseId = horse.dataset.horse; updateSelection(); return; }
+      if (event.target.closest('[data-start]')) { reset(selectedMode); return; }
       const button = event.target.closest('[data-act]');
       if (button) action(button.dataset.act);
     }
