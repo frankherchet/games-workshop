@@ -75,6 +75,14 @@ class DeploymentTests(unittest.TestCase):
             (dist / name).write_bytes(b'changed')
             with self.assertRaises(ValueError): deploy.assets_for(dist)
 
+    def test_sprite_atlas_is_an_allowed_hashed_asset(self):
+        import hashlib, json
+        with tempfile.TemporaryDirectory() as directory:
+            dist=Path(directory);(dist / 'assets').mkdir()
+            data=b'sprite-example';name='assets/garden-sprites-'+hashlib.sha256(data).hexdigest()[:12]+'.png'
+            (dist / name).write_bytes(data);(dist / 'assets-manifest.json').write_text(json.dumps([name]))
+            self.assertEqual(deploy.assets_for(dist),[dist / name])
+
     def test_assets_publish_before_index_and_failure_keeps_old_page(self):
         class FakeFTP:
             def __init__(self, fail=False): self.calls = []; self.fail = fail

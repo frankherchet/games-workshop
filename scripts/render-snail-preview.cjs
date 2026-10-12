@@ -2,6 +2,8 @@
 const fs=require('node:fs');
 const {createCanvas,Image}=require('@napi-rs/canvas');
 global.Image=Image;global.SnailAssets={garden:require('node:path').resolve('src/assets/garden-fine-v3.png')};
+global.SnailAssets.sprites=require('node:path').resolve('src/assets/garden-sprites-v4.png');
+require('../src/games/snail-sprites.js');
 global.SnailModel=require('../src/games/snail-model.js');require('../src/games/snail-art.js');
 (async()=>{
  await global.SnailArt.ready;

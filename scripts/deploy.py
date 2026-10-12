@@ -37,12 +37,12 @@ def assets_for(dist):
         raise ValueError('Invalid asset manifest.')
     assets = []
     for name in manifest:
-        if not isinstance(name, str) or not re.fullmatch(r'assets/garden-fine-[a-f0-9]{12}\.png', name):
+        if not isinstance(name, str) or not re.fullmatch(r'assets/(?:garden-fine|garden-sprites)-[a-f0-9]{12}\.png', name):
             raise ValueError('Unsupported asset path.')
         asset = dist / name
         if not asset.is_file() or asset.is_symlink() or asset.resolve().parent != (dist / 'assets').resolve():
             raise ValueError('Missing or unsafe asset.')
-        if hashlib.sha256(asset.read_bytes()).hexdigest()[:12] != asset.stem.removeprefix('garden-fine-'):
+        if hashlib.sha256(asset.read_bytes()).hexdigest()[:12] != asset.stem.rsplit('-',1)[-1]:
             raise ValueError('Asset content hash does not match its filename.')
         assets.append(asset)
     return assets

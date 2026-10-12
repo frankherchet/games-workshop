@@ -72,3 +72,9 @@ Automatische Tests prüfen unter anderem Gießen, Verwelken, Wirtschaft, Erweite
 Die Shop-Leiste bietet Waffen (Hackenschaden und Cooldown), Pflanzen (Samen und Gartenfläche) und Fallen/Verteidigung (Fallen, Zäune, Kupferband, Enten und Futter). Die aktive Kategorie bleibt beim Kauf erhalten.
 
 Schneckenprämien und Erträge gegossener Pflanzen erzeugen jeweils eine aufsteigende, drehende Münze mit +Betrag. Die Animation verblasst nach 1,35 Sekunden; bei reduzierter Bewegung bleibt sie an Ort und Stelle. Gespeicherte Partien spielen vergangene Ertragsanimationen nicht erneut ab.
+
+## Figuren und Schnecken V0.4
+
+Das transparente Sprite-Blatt `src/assets/garden-sprites-v4.png` ist mit der integrierten Bildgenerierung nach der beigefügten Referenz erstellt. Prompt: feine mittelalterliche Pixelkunst mit Gärtner, Gärtnerin und Farmer-Fuchs; vier Blickrichtungen, je Ruhepose und zwei Laufphasen; vier Schneckenformen mit je drei Kriechphasen. Die 48 Einzelbilder sind über gemessene Transparenzgrenzen zugeschnitten, nicht über ein angenommenes gleichmäßiges Raster. Das optionale Autorentool `scripts/inspect-snail-atlas.cjs` benötigt @napi-rs/canvas; Produktion, Build und CI benötigen dieses Paket nicht.
+
+`snail-sprites.js` lädt das Blatt erst im Spiel, wählt Blickrichtung und Animationsphase und übernimmt es auch für die Figurenauswahl. Bei fehlender Bilddatei bleibt der frühere Canvas-Zeichenstil als Rückfall erhalten. Die schnelle Schnecke erscheint als Nacktschnecke; normale, gepanzerte und riesige Schnecken haben unterschiedliche Gehäuse und Augen. Die Gegnerwerte bleiben erhalten. Die Produktionsseite lädt Garten und Sprite-Blatt als separat gehostete Dateien mit Inhalts-Hash; die eigenständige Vorschau enthält beide eingebettet.

@@ -147,6 +147,10 @@
 
   function character(c,type,x,y,time=0,moving=false,direction={dx:0,dy:1},pose={}){
     time=motion?.matches?0:time;const walk=moving?Math.sin(time*13):0,bob=moving?Math.round(Math.abs(walk)):0;
+    if(root.SnailSprites?.character(c,type,x,y,time,moving,direction)){
+      if(pose.water){const cx=x+direction.dx*21,cy=y-19+direction.dy*12;rect(c,cx-8,cy-5,15,11,'#658f99');rect(c,cx-6,cy-4,10,2,'#c2d9d0');rect(c,cx+6,cy-3,10,3,'#729da6');}
+      return;
+    }
     const flip=direction.dx<-.4;if(flip){c.save();c.translate(x*2,0);c.scale(-1,1);}
     oval(c,x,y+2,21,6,'#102e303b');
     if(type==='fox'){const sway=Math.round(Math.sin(time*3.5)*3);rect(c,x+15,y-24+sway,17,8,'#b56636');rect(c,x+28,y-31+sway,8,12,'#df9855');rect(c,x+29,y-31+sway,7,5,'#f0dfbd');rect(c,x+18,y-23+sway,8,2,'#edb775');}
@@ -166,6 +170,11 @@
     if(flip)c.restore();
   }
   function snail(c,n,time,night){
+    if(root.SnailSprites?.snail(c,n,time)){
+      if(night){const facing=n.dx<0?-1:1;for(let i=0;i<2;i++){const ex=n.x+facing*(19+i*5),ey=n.y-11-i*3;oval(c,ex,ey,4,4,'#ffd77b28',1);rect(c,ex,ey,2,2,n.type==='armored'?'#b4eef8':'#fff0bd');}}
+      if(n.maxHp>1){rect(c,n.x-15,n.y-31,30,3,'#342d3c');rect(c,n.x-15,n.y-31,30*n.hp/n.maxHp,3,'#d992a0');}
+      return;
+    }
     const giant=n.type==='giant',r=giant?19:12,breath=Math.round(Math.sin(time*3+n.id)*.8),direction=n.dx<0?-1:1;
     oval(c,n.x+4,n.y+10,r+13,5,'#16343145');c.save();c.translate(Math.round(n.x),Math.round(n.y));c.scale(direction,1);
     const skin=n.type==='fast'?'#b4a987':giant?'#789588':'#91a184';
@@ -249,5 +258,5 @@
     }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,character,sprite,get ready(){return loadScenery();}};
+  root.SnailArt={garden,character,sprite,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
 })(globalThis);
