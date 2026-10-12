@@ -8,6 +8,7 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 - Vollbild bei allen Spielen: native Fullscreen-API mit bildschirmfüllendem Browser-Fallback, proportional angepasstem Spielfeld, erreichbarer Steuerung und Rückkehr per Button oder Escape. Die tatsächliche Anzeige auf dem iPad muss noch geprüft werden.
 - Eigene, direkt verlinkbare Spielansichten über `#spiel/neon-breakout`, `#spiel/memory-quest` und `#spiel/pixel-runner`.
 - Schneckenkampf: märchenhafte Gartenpflege, Nachtkämpfe, drei freischaltbare Gärten, Shop und lokale Spielstände. Details: [Spielkonzept und Prüfstand](docs/schneckenkampf.md).
+- **Pferdezauber – 3D-Prototyp V2:** Frei begehbare Low-Poly-Pferdewiese (WebGL ohne CDN), Startmenü mit **6 Pferdevarianten** (2 Fohlen, Shetlandpony, Welsh-Pony, Haflinger, Friese) und unterschiedlichen Farben, Größen und Geschwindigkeiten. Mensch + Begleitpferd oder nur Pferd, Figurenwechsel (Q), Verwandlung (T), drei Lichtfunken zum Sammeln, Gangarten und Springen; auch mit Touch-Steuerung. **Noch kein vollständiges Spiel, keine Online-Konten und kein Spielstand.** [V2-Testseite](https://games.computersys.de/pferdezauber-demo-v2-20261012/) · [Issue #1](https://github.com/frankherchet/games-workshop/issues/1).
 - Neon Breakout: 40 Blöcke, drei Leben, Maus, Touch und Tastatur.
 - Memory Quest: acht Paare, Tastaturbedienung und Bestwert nach Zügen.
 - Pixel Runner: sieben Sterne, Sprünge, Abgründe, Stacheln und Zielportal.
@@ -54,6 +55,12 @@ Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüssel
 ## Wiederherstellung
 
 Jede Version liegt in Git. Für einen Rollback den gewünschten Stand als neuen Commit auf `main` wiederherstellen, Prüfungen durchlaufen lassen und denselben freigegebenen Deployment-Workflow starten. Zusätzlich werden Veröffentlichungspakete 90 Tage als Actions-Artefakte aufbewahrt. Der erste Upload setzt eine vorhandene lokale Sicherung des bisherigen Zielverzeichnisses voraus.
+
+## Pferdezauber lokal testen
+
+Die ersten 3D-Spielfunktionen sind im Arcade-Katalog unter `#spiel/pferdezauber` zu finden. In **V2** kann vor dem Start zwischen sechs Fohlen-, Pony- und Großpferd-Varianten gewählt werden. Nach `npm run build` kann `dist/index.html` direkt im Browser geöffnet werden. Der Prototyp verwendet native WebGL-Geometrie, keine externen Bibliotheken und benötigt **kein Node.js auf dem Server**. Die bestehende manuelle Veröffentlichungsfreigabe bleibt unverändert.
+
+Desktop: WASD/Pfeiltasten bewegen, Q zur anderen Figur wechseln, T Mensch↔Pferd, G Gangart, Leertaste springen, Mausziehen für Kamera. Touch: Richtungstasten und Aktionsschaltflächen; Finger auf der Spielfläche drehen die Kamera. Die Demo enthält bewusst noch keine Konten, keine Online-Speicherung und keine vollständigen Abenteuer; das sind spätere Entwicklungspakete. Ein erfolgreicher automatisierter Build ersetzt **keine** Browser-/Mobilgerätetests.
 
 ## Weitere Spiele hinzufügen
 
