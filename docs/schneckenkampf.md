@@ -37,7 +37,7 @@ Automatische Speicherung spätestens alle zwei aktiven Sekunden, nach Käufen, G
 
 Gegossene Pflanzen bringen beim Sonnenaufgang Einkommen. Gießen heilt Schäden; beim Einpflanzen werden Pflanzen gleich gegossen. Nach einer trockenen Nacht gibt es keinen Ertrag, nach der zweiten aufeinanderfolgenden trockenen Nacht verwelkt die Pflanze. Gehen alle Pflanzen verloren, endet die Partie.
 
-Der Garten lässt sich zweimal um je drei Pflanzplätze erweitern, für Grundpreise 55 und 85. Die neuen Plätze bleiben zunächst leer und brauchen Samen. Alle Preise werden an den Schwierigkeitsgrad angepasst.
+Der Garten lässt sich sechsmal um je drei Pflanzplätze auf insgesamt 24 Plätze erweitern, für Grundpreise 55, 70, 85, 100, 115 und 130. Die neuen Plätze bleiben zunächst leer und brauchen Samen. Alle Preise werden an den Schwierigkeitsgrad angepasst.
 
 ## Shop und Verteidigung
 
@@ -63,7 +63,7 @@ Touch-Joystick links, Aktion rechts. Nachts darf der Hackenbutton gehalten werde
 
 `snail-model.js` enthält die testbare Spiellogik, `snail-art.js` zeichnet die Pixelwelt, `snail-game.js` verwaltet Menüs, Input und Speicher, `snail-style.css` die Oberfläche. Das Spiel ist im zentralen Katalog mit Kategorie Strategie und eigener Vorschau integriert. Die Plattform lädt die feine Landschaftsgrafik erst beim Öffnen von Schneckenkampf aus `assets/`. Figuren, Pflanzen, Gegner und Effekte werden darüber dynamisch gezeichnet. Die Spielfläche zeichnet mit doppelter Auflösung; Menüs und Anzeigen verwenden Holz, Pergament, Gold und Waldgrün. `snail-refined.css` ergänzt die märchenhafte Oberfläche. Die Vorschau enthält die PNG eingebettet; die Produktionsseite verwendet eine separate Bilddatei mit Inhalts-Hash. `dist/schneckenkampf.html` startet für die lokale Vorschau direkt das neue Spiel.
 
-Automatische Tests prüfen unter anderem Gießen, Verwelken, Wirtschaft, Erweiterungen, Gartenfreischaltung, Speicherstände laufender Nächte, Gegner, Hackenschläge, Zäune, Fallen, Enten und Verlustbedingungen. Die Canvas-Grafik wurde separat gerendert und visuell geprüft. Eine echte Browser- und iPad-Prüfung des neuen Spiels steht noch aus; die erste Version ist deshalb zur Prüfung vorbereitet, nicht öffentlich veröffentlicht. Die Preis- und Wellenbalance ist ein erster Ansatz und soll anhand echter Spielrunden weiter abgestimmt werden.
+Automatische Tests prüfen unter anderem Gießen, Verwelken, Wirtschaft, Erweiterungen, Gartenfreischaltung, Speicherstände laufender Nächte, Gegner, Hackenschläge, Zäune, Fallen, Enten und Verlustbedingungen. Die Canvas-Grafik wurde separat gerendert und visuell geprüft. Die Grafikversion V0.3 und ihr Vollbildmodus sind öffentlich veröffentlicht und im Cloud-Browser geprüft. Die danach ergänzten Shop-Kategorien, kompakten Beete und Münzeffekte sind noch nicht veröffentlicht; eine echte iPad-Prüfung steht aus. Die Preis- und Wellenbalance ist ein erster Ansatz und soll anhand echter Spielrunden weiter abgestimmt werden.
 
 ## Kompakte Beete, Shop und Erträge
 
