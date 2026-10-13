@@ -11,16 +11,21 @@
     if(row.signal)return {active:t<3,warning:t>=2.2&&t<3,label:t<3?'STOP':'LOS',remaining:(t<3?3:6)-t};
     if(row.pulse)return {active:t>=1.5&&t<2.8,warning:t<1.5,label:t<1.5?'ACHTUNG':t<2.8?'STOP':'LOS',remaining:(t<1.5?1.5:t<2.8?2.8:6)-t};
     if(row.kind==='sink')return {active:t<4.2,warning:t>=3.2&&t<4.2,label:t<3.2?'TRÄGT':t<4.2?'SINKT':'UNTER WASSER',remaining:(t<4.2?4.2:6)-t};
+    if(row.wind){const t=mod(time,8);return {active:true,warning:t<2,label:t<2?'ACHTUNG':t<5?'SCHNELL':'RUHIG',remaining:(t<2?2:t<5?5:8)-t};}
+    if(row.dock){const t=mod(time,8);return {active:true,warning:false,label:t<3?'ANLEGER':'FÄHRT',remaining:(t<3?3:8)-t};}
     return {active:true,warning:false,label:'',remaining:0};
   }
   function distance(row,time) {
-    // Wind varies smoothly; the same time always yields the same platform position.
-    return row.speed*(time+(row.wind?.35*Math.sin(time*.8):0));
+    if(row.dock)return row.speed*(Math.floor(time/8)*5+Math.max(0,mod(time,8)-3));
+    if(row.wind)return row.speed*(time+Math.floor(time/8)*3+Math.min(3,Math.max(0,mod(time,8)-2)));
+    return row.speed*time;
   }
   function objects(row,time) {
     if(row.kind==='sink')return (row.offsets||[1,4,7]).map((x,i)=>({x,w:row.width||1.8,index:i,danger:false}));
     if(!row.offsets)return [];
-    return row.offsets.map((offset,i)=>({x:mod(offset+distance(row,time)+2,PERIOD)-2,w:row.width,index:i,danger:(row.dangers||[]).includes(i)}));
+    const result=row.offsets.map((offset,i)=>({x:mod(offset+distance(row,time)+2,PERIOD)-2,w:row.width,index:i,danger:(row.dangers||[]).includes(i),active:phase(row,time).active}));
+    if(row.emergency)result.push(...objects(row.emergency,time).map(o=>({...o,emergency:true})));
+    return result;
   }
   function support(row,x,time) {
     if(row.kind==='safe'||row.kind==='ice')return true;
@@ -32,7 +37,7 @@
     if(s.status!=='playing')return;
     const p=s.player,row=s.level.rows[p.y];
     if(p.x<0||p.x>D.WIDTH-1){fail(s,'Du bist über den Rand getrieben.');return;}
-    if(row.kind==='road'&&phase(row,s.time).active&&objects(row,s.time).some(o=>p.x+.28>o.x&&p.x-.28<o.x+o.w)){fail(s,'Erwischt! Warte auf die nächste Lücke.');return;}
+    if(row.kind==='road'&&objects(row,s.time).some(o=>o.active&&p.x+.28>o.x&&p.x-.28<o.x+o.w)){fail(s,'Erwischt! Warte auf die nächste Lücke.');return;}
     if(['water','sink'].includes(row.kind)&&!support(row,p.x,s.time)){fail(s,row.kind==='sink'?'Die Plattform ist versunken.':'Im Wasser gelandet. Suche eine sichere Plattform.');return;}
     s.level.flies.forEach((fly,i)=>{if(fly.y===p.y&&Math.abs(fly.x-p.x)<.48&&!s.collected.includes(i))s.collected.push(i);});
     if(s.level.friend&&p.y===s.level.friend.y&&Math.abs(p.x-s.level.friend.x)<.48)s.rescued=true;

@@ -48,3 +48,24 @@ test('restart resets pickups, elapsed time and rescue',()=>{
   const s=M.create(D.levels[0]);s.collected=[0,1,2];s.rescued=true;s.time=5;
   const reset=M.create(s.level);assert.deepEqual(reset.collected,[]);assert.equal(reset.rescued,false);assert.equal(reset.time,0);
 });
+test('signals, train warning and emergency during green have distinct phases',()=>{
+  assert.equal(M.phase({signal:true},2.9).active,true);assert.equal(M.phase({signal:true},3).active,false);
+  assert.equal(M.phase({pulse:true},1).warning,true);assert.equal(M.phase({pulse:true},1.5).active,true);
+  const row=D.levels.find(l=>l.id==='2-08').rows[1];
+  assert.equal(M.phase(row,4.8).active,false);assert.equal(M.phase(row.emergency,4.8).active,true);
+  const s=M.create(level([row,{kind:'safe'}]));s.time=4.8;s.player.x=2;M.step(s,.01);assert.equal(s.status,'lost');
+});
+test('sinking leaves warn before losing support; crocodiles never support',()=>{
+  const row={kind:'sink',width:2,offsets:[3]};
+  assert.equal(M.phase(row,3.5).warning,true);assert.ok(M.support(row,4,4.1));assert.equal(M.support(row,4,4.2),false);
+  const s=M.create(level([row,{kind:'safe'}]));s.time=4.19;M.step(s,.05);assert.equal(s.status,'lost');
+  assert.equal(M.support({kind:'water',speed:0,width:2,offsets:[3],dangers:[0]},4,0),undefined);
+});
+test('ferries stop at the dock and announced currents accelerate continuously',()=>{
+  const row={kind:'water',speed:.5,width:3,offsets:[0],dock:true};
+  assert.equal(M.objects(row,0)[0].x,M.objects(row,2.9)[0].x);
+  assert.ok(Math.abs(M.objects(row,4)[0].x-.5)<1e-8);
+  const wind={...row,dock:false,wind:true};
+  assert.equal(M.phase(wind,1).warning,true);assert.equal(M.phase(wind,2).label,'SCHNELL');
+  assert.ok(Math.abs(M.objects(wind,3)[0].x-M.objects(wind,2)[0].x-1)<1e-8);
+});
