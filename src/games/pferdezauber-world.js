@@ -37,8 +37,8 @@
   function tick(pop,t,dt) {
     for(const h of pop.horses){
       const a=h.phase+t*.15;
-      h.x=h.cx+Math.sin(a)*h.radius; h.z=h.cz+Math.cos(a*.82)*h.radius;
-      h.heading=Math.atan2(Math.cos(a),-.82*Math.sin(a*.82));
+      h.x=h.cx+Math.sin(a)*h.radius; h.z=h.cz+Math.cos(a)*h.radius;
+      h.heading=Math.atan2(Math.cos(a),-Math.sin(a));
       h.walk+=dt*.12;
     }
     for(const p of pop.people){
