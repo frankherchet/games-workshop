@@ -562,6 +562,52 @@
       const v=local(p,lx,y,lz),scale=p.horseScale||1;
       ellipsoid(m,v[0],v[1],v[2],rx*scale,ry*scale,rz*scale,c,p.heading);
     }
+    // A short, rounded 3D rope connects the hand to the bridle. This is real
+    // geometry within the same WebGL scene rather than a floating screen line.
+    function cord(m,a,b,radius,color) {
+      const dir=b.map((v,i)=>v-a[i]),len=Math.hypot(...dir);
+      if(len<.001)return;
+      const axis=dir.map(v=>v/len),base=Math.abs(axis[1])<.92?[0,1,0]:[1,0,0];
+      const u=[base[1]*axis[2]-base[2]*axis[1],base[2]*axis[0]-base[0]*axis[2],base[0]*axis[1]-base[1]*axis[0]];
+      const ul=Math.hypot(...u)||1;u.forEach((v,i)=>u[i]=v/ul);
+      const v=[axis[1]*u[2]-axis[2]*u[1],axis[2]*u[0]-axis[0]*u[2],axis[0]*u[1]-axis[1]*u[0]];
+      for(let i=0;i<7;i++){
+        const angle=i*2*Math.PI/7,next=(i+1)*2*Math.PI/7;
+        const offset=a=>u.map((q,j)=>radius*(q*Math.cos(a)+v[j]*Math.sin(a)));
+        const n0=offset(angle),n1=offset(next);
+        const point=(p,n)=>p.map((q,j)=>q+n[j]);
+        const p0=point(a,n0),p1=point(a,n1),p2=point(b,n0),p3=point(b,n1);
+        tri(m,p0,p1,p2,n0.map(q=>q/radius),color);
+        tri(m,p1,p3,p2,n1.map(q=>q/radius),color);
+      }
+    }
+    function hat(m,pose,y,type) {
+      const dark=[.18,.21,.25];
+      if(type==='helmet') {
+        blob(m,pose,0,y-.04,-.06,.34,.23,.33,dark);
+        blob(m,pose,0,y-.17,.16,.32,.06,.25,[.12,.14,.19]);
+        for(const side of [-1,1])limb(m,pose,side*.24,y-.36,.08,.037,.28,.035,[.29,.23,.21]);
+      } else if(type==='cowboy') {
+        blob(m,pose,0,y-.07,-.03,.43,.065,.40,[.47,.32,.20]);
+        blob(m,pose,0,y+.10,-.08,.27,.23,.27,[.49,.34,.22]);
+        blob(m,pose,0,y+.13,-.02,.27,.04,.29,[.82,.66,.43]);
+      } else {
+        blob(m,pose,0,y-.03,-.08,.33,.18,.31,[.27,.43,.57]);
+        blob(m,pose,0,y-.15,.20,.28,.04,.21,[.22,.36,.49]);
+      }
+    }
+    function leadRope(m) {
+      const h=state.companion,p=state.player;
+      const profile=horseById(h.horseId);
+      const humanHand=local(p,.42,1.05,.48);
+      const hPose={...h,horseScale:profile.size};
+      const bit=local(hPose,.12,1.68,1.34);
+      const middle=humanHand.map((q,i)=>(q+bit[i])/2);
+      middle[1]-=.16;
+      cord(m,humanHand,middle,.027,[.33,.21,.14]);
+      cord(m,middle,bit,.027,[.33,.21,.14]);
+      blob(m,p,.42,1.05,.48,.09,.09,.09,[.91,.71,.56]);
+    }
     function horse(m,p,t,isCompanion) {
       const breed=horseById(p.horseId);
       const fur=breed.coat;
@@ -608,15 +654,22 @@
     function human(m,p) {
       const moving=Math.sin(p.walk*9),lift=p.jump>0?Math.sin(p.jump*PI/.78)*.75:0;
       const shirts=[[.28,.59,.55],[.76,.47,.48],[.36,.49,.73],[.79,.67,.42]];
-      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:p.style===undefined?[.59,.44,.70]:shirts[p.style%shirts.length],jeans=[.34,.49,.62];
+      const selection=p.outfitId ? outfitById(p.outfitId) : p===KEEPER ? OUTFITS[1] : OUTFITS[(p.style||0)%OUTFITS.length];
+      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:p.style===undefined?selection.shirt:shirts[p.style%shirts.length],jeans=selection.pants;
       limb(m,p,0,1.26+lift,0,.62,.78,.37,shirt);
       blob(m,p,0,1.91+lift,.01,.29,.33,.27,skin);
       blob(m,p,0,2.15+lift,-.07,.32,.20,.31,[.36,.25,.22]);
+      hat(m,p,2.32+lift,selection.hat);
+      // Jacket front, boot cuffs and contrasting shirt buttons.
+      for(let i=0;i<3;i++)blob(m,p,.02,1.52+lift-i*.17,.19,.035,.028,.032,[.88,.79,.62]);
       for(const side of [-1,1]){
         const k=side*moving*.12;
         limb(m,p,side*.19,.43+lift,k,.23,.82,.27,jeans);
         limb(m,p,side*.19,.09+lift,k+.12,.27,.18,.39,[.31,.33,.37]);
-        limb(m,p,side*.43,1.20+lift,-k,.18,.76,.22,skin);
+        limb(m,p,side*.43,1.20+lift,-k,.19,.76,.22,shirt);
+        blob(m,p,side*.19,.24+lift,k,.145,.16,.17,[.19,.23,.26]); // riding boots
+        if(state.leading&&p===state.player&&side===1)
+          limb(m,p,side*.42,1.17+lift,.28,.18,.43,.23,skin);
       }
     }
     function rider(m,p,t) {
@@ -625,11 +678,13 @@
       const bob=Math.sin(p.walk*9)*.035*horseScale;
       const jump=p.jump>0?Math.sin(p.jump*PI/.78)*.8*horseScale:0;
       const hips=horseScale*2.03+bob+jump,pose={x:p.x,z:p.z,heading:p.heading};
-      const shirt=[.59,.44,.70],skin=[.91,.71,.56],jeans=[.30,.43,.62];
+      const outfit=outfitById(state.player.outfitId);
+      const shirt=outfit.shirt,skin=[.91,.71,.56],jeans=outfit.pants;
       blob(m,pose,0,hips,-.22,.35,.21,.30,jeans); // hips resting on seat
       limb(m,pose,0,hips+.54,-.08,.56,.87,.34,shirt);
       blob(m,pose,0,hips+1.20,.02,.27,.30,.26,skin);
       blob(m,pose,0,hips+1.46,-.06,.29,.17,.29,[.32,.23,.22]);
+      hat(m,pose,hips+1.62,outfit.hat);
       for(const side of [-1,1]) {
         // Bent legs lie on opposite sides of the horse's body, feet in stirrups.
         limb(m,pose,side*.39,hips-.27,-.03,.24,.67,.29,jeans);
@@ -707,6 +762,7 @@
         if(p.form==='human')human(m,p);else horse(m,p,t,p===state.companion);
       }
       if(state.mounted)rider(m,state.companion,t);
+      if(state.leading)leadRope(m);
       human(m,KEEPER);
       if(state.quest!=='meet' && state.quest!=='trail') {
         const foal=state.quest==='escort'||state.quest==='foal'?state.foal:{...state.foal,x:-12,z:7};
