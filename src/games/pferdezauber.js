@@ -5,6 +5,13 @@
   // Node.js is needed to play it on the ALL-INKL webspace.
   const MODES = ['duo', 'horseOnly'];
   const SPEEDS = [2.7, 4.4, 6.6];
+  const OUTFITS = Object.freeze([
+    {id:'helmet',label:'Reithelm & Jacke',shirt:[.40,.39,.70],hat:'helmet',pants:[.30,.36,.46]},
+    {id:'cowboy',label:'Westernhut & Weste',shirt:[.60,.38,.23],hat:'cowboy',pants:[.36,.47,.60]},
+    {id:'cap',label:'Kappe & Sportjacke',shirt:[.20,.63,.57],hat:'cap',pants:[.26,.39,.51]}
+  ]);
+  const OUTFIT_MAP=Object.fromEntries(OUTFITS.map(o=>[o.id,o]));
+  function outfitById(id){return Object.prototype.hasOwnProperty.call(OUTFIT_MAP,id)?OUTFIT_MAP[id]:OUTFITS[0];}
   const HUMAN_PACES = Object.freeze([
     { label:'Gehen', speed:2.8 },
     { label:'Rennen', speed:5.2 },
@@ -22,12 +29,12 @@
   const HORSES = Object.fromEntries(HORSE_CATALOG.map(h => [h.id,h]));
   const DEFAULT_HORSE = 'haflinger';
   function horseById(id) { return Object.prototype.hasOwnProperty.call(HORSES,id) ? HORSES[id] : HORSES[DEFAULT_HORSE]; }
-  function newState(mode, horseId=DEFAULT_HORSE) {
+  function newState(mode, horseId=DEFAULT_HORSE, outfitId='helmet') {
     return {
       mode: MODES.includes(mode) ? mode : 'duo',
-      player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, jump: 0, walk: 0 },
+      player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, outfitId: outfitById(outfitId).id, jump: 0, walk: 0 },
       companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', horseId: horseById(horseId).id, jump: 0, walk: 0 },
-      active: 'player', gait: 0, humanPace: 1, following: true, mounted: false, stars: [false, false, false],
+      active: 'player', gait: 0, humanPace: 1, following: true, leading: false, mounted: false, stars: [false, false, false],
       quest: 'meet', trail: 0, foal: { x: -13, z: -12, heading: 0, form: 'horse', horseId: 'foal-brown', jump: 0, walk: 0 },
       ambient: root.Arcade.pferdezauberWorld.create(),
     };
@@ -49,6 +56,7 @@
     if(s.player.form!=='human')return 'needHuman';
     if(horseById(s.companion.horseId).foal)return 'foal';
     if(Math.hypot(s.player.x-s.companion.x,s.player.z-s.companion.z)>2.8)return 'tooFar';
+    s.leading=false;
     s.mounted=true;
     s.active='companion';
     s.player.x=s.companion.x; s.player.z=s.companion.z;
@@ -58,11 +66,12 @@
   function switchTarget(s) {
     if (s.mode !== 'duo') return false;
     if (s.mounted) return dismount(s);
+    s.leading=false;
     s.active = s.active === 'player' ? 'companion' : 'player';
     return true;
   }
   function transform(s) {
-    if (s.mode !== 'duo' || s.mounted) return false;
+    if (s.mode !== 'duo' || s.mounted || s.leading) return false;
     s.player.form = s.player.form === 'human' ? 'horse' : 'human';
     return true;
   }
@@ -81,6 +90,33 @@
   function movementSpeed(s) {
     const entity = controlled(s);
     return entity.form === 'human' ? HUMAN_PACES[s.humanPace].speed : SPEEDS[s.gait] * horseById(entity.horseId).speed;
+  }
+  function toggleLead(s) {
+    if(s.mode!=='duo')return 'horseOnly';
+    if(s.leading) {
+      s.leading=false;
+      s.following=false; // Released horse stays nearby until follow is enabled again.
+      return 'released';
+    }
+    if(s.mounted)return 'mounted';
+    if(s.active!=='player'||s.player.form!=='human')return 'needHuman';
+    if(distance(s.player,s.companion)>2.75)return 'tooFar';
+    s.leading=true;s.following=false;
+    return 'leading';
+  }
+  function leadTarget(s) {
+    const p=s.player,co=Math.cos(p.heading),si=Math.sin(p.heading);
+    return {x:p.x+co*1.10-si*.75,z:p.z-si*1.10-co*.75};
+  }
+  function advanceLead(s,dt) {
+    if(!s.leading)return;
+    const h=s.companion,target=leadTarget(s);
+    const dx=target.x-h.x,dz=target.z-h.z,dist=Math.hypot(dx,dz);
+    if(dist<.04)return;
+    const step=Math.min(dist,Math.max(3,HUMAN_PACES[s.humanPace].speed+2)*dt);
+    h.x=Math.max(-29,Math.min(29,h.x+dx/dist*step));
+    h.z=Math.max(-29,Math.min(29,h.z+dz/dist*step));
+    if(step>.005){h.heading=Math.atan2(dx,dz);h.walk+=step/3;}
   }
   function switchLabel(s) {
     if (s.mode !== 'duo') return '';
@@ -130,7 +166,7 @@
       f.x+=dx/dist*step; f.z+=dz/dist*step; f.heading=Math.atan2(dx,dz); f.walk+=step/3;
     }
   }
-  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld, mountOrDismount, dismount };
+  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld, mountOrDismount, dismount, toggleLead, advanceLead, leadTarget, outfitById, outfits:OUTFITS };
 
 
   root.Arcade.games.pferdezauber = function ({ host }) {
