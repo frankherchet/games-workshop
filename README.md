@@ -14,6 +14,10 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 - Pixel Runner: sieben Sterne, Sprünge, Abgründe, Stacheln und Zielportal.
 - Pause, Neustart und lokale Bestwerte. Keine Konten, kein Tracking, keine externen Fonts oder CDN-Abhängigkeiten. Diese Version hat keine Audioeffekte.
 
+## Geplante Spiele
+
+- **Frogger – Weltenhüpfer:** [Konzept mit drei Grafik-/Technikvarianten und fünf Welten à zehn Levels](docs/frogger.md). Grafikstil noch offen; noch keine spielbare Umsetzung.
+
 ## Entwickeln und prüfen
 
 Node.js 22+ und Python 3 genügen. Keine Paketinstallation notwendig.
