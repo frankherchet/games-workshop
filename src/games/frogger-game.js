@@ -14,6 +14,11 @@
     const fullscreen=root.ArcadeFullscreen.create({element:pane,button:host.querySelector('[data-action="fullscreen"]'),stage:host.querySelector('.fg-stage'),aspect:4/3});
     const directions={up:[0,1],down:[0,-1],left:[-1,0],right:[1,0]},keys={arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right'};
     function draw(){
+      const rect=canvas.getBoundingClientRect(),displayWidth=Math.min(rect.width||960,(rect.height||720)*4/3);
+      const ratio=Math.max(.5,Math.min(2,displayWidth*(window.devicePixelRatio||1)/960));
+      const width=Math.round(960*ratio),height=Math.round(720*ratio);
+      if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+      c.setTransform(width/960,0,0,height/720,0,0);
       const row=state.level.rows[Math.min(state.player.y+1,state.level.rows.length-1)],ph=M.phase(row,state.time);
       let warning=row.kind==='road'?'Nächste Querung: Verkehr – warte auf eine Lücke.':row.kind==='water'?'Nächste Querung: auf einer Plattform mitfahren.':row.kind==='ice'?'Nächste Querung: Eis – ein Zusatzschritt.':'';
       if(row.signal||row.pulse||row.wind||row.dock||row.kind==='sink')warning=`Nächste Querung: ${row.kind==='sink'?(ph.warning?(row.style==='ice'?'BRICHT':'SINKT'):ph.active?'TRÄGT':'WEG'):ph.label} · ${Math.ceil(ph.remaining)} s`;
