@@ -1,0 +1,32 @@
+name: One-time Pferdezauber living-world preview
+on:
+  push:
+    branches: [feature/pferdezauber-living-world]
+    paths: [.github/workflows/pferdezauber-living-preview.yml]
+permissions:
+  contents: read
+concurrency:
+  group: allinkl-pferdezauber-living-preview
+  cancel-in-progress: false
+jobs:
+  isolated-living-preview:
+    if: >-
+      github.repository == 'frankherchet/games-workshop' && github.ref == 'refs/heads/feature/pferdezauber-living-world' && github.event.head_commit.message == 'chore: publish one-time isolated living-world preview'
+    runs-on: ubuntu-latest
+    environment: allinkl
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Run regression tests and build
+        run: |
+          node --test tests/*.test.js
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          node scripts/build.js
+          node scripts/check.js
+      - name: Publish in an isolated directory and verify checksum over HTTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: python3 scripts/deploy_pferdezauber_living_once.py
