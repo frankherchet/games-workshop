@@ -184,3 +184,56 @@ test('Lumi waits when left behind, resumes nearby, and must actually reach the s
   assert.equal(fresh.trail,0);
   assert.equal(fresh.foal.x,-13);
 });
+
+
+test('human pace is user-selectable with walking, running and sprinting', () => {
+  const s=logic.newState('duo','haflinger');
+  assert.deepEqual(Array.from(logic.humanPaces, p=>p.label), ['Gehen','Rennen','Sprinten']);
+  assert.equal(s.humanPace,1); // Running is the default, faster than old walking speed.
+  assert.equal(logic.movementSpeed(s),5.2);
+  assert.equal(logic.cycleHumanPace(s),true);
+  assert.equal(s.humanPace,2);
+  assert.equal(logic.movementSpeed(s),7.8);
+  assert.equal(logic.cycleHumanPace(s),true);
+  assert.equal(s.humanPace,0);
+  assert.equal(logic.movementSpeed(s),2.8);
+  assert.equal(logic.cycleHumanPace(s),true);
+  assert.equal(logic.movementSpeed(s),5.2);
+});
+
+test('the separate horse can be controlled directly and the speed stays horse-specific', () => {
+  const s=logic.newState('duo','friesian');
+  assert.equal(logic.switchLabel(s),'🐎 Pferd spielen');
+  const humanSpeed=logic.movementSpeed(s);
+  assert.equal(logic.switchTarget(s),true);
+  assert.equal(s.active,'companion');
+  assert.equal(logic.switchLabel(s),'🧍 Mensch spielen');
+  assert.equal(logic.movementSpeed(s),2.7*logic.horseById('friesian').speed);
+  assert.equal(logic.cycleHumanPace(s),false);
+  assert.equal(s.humanPace,1);
+  s.gait=2;
+  assert.equal(logic.movementSpeed(s),6.6*logic.horseById('friesian').speed);
+  logic.switchTarget(s);
+  assert.equal(logic.movementSpeed(s),humanSpeed);
+});
+
+test('the horse-only mode begins as a real controllable horse and never offers the human pace', () => {
+  const s=logic.newState('horseOnly','foal-brown');
+  assert.equal(s.player.form,'horse');
+  assert.equal(logic.switchLabel(s),'');
+  assert.equal(logic.cycleHumanPace(s),false);
+  assert.equal(logic.movementSpeed(s),2.7*logic.horseById('foal-brown').speed);
+  assert.equal(logic.switchTarget(s),false);
+});
+
+test('magic transformation is independent from controlling the companion horse', () => {
+  const s=logic.newState('duo','welsh');
+  logic.transform(s);
+  assert.equal(logic.switchLabel(s),'🐎 Pferd spielen');
+  assert.equal(logic.cycleHumanPace(s),false);
+  logic.switchTarget(s);
+  assert.equal(logic.switchLabel(s),'✨ Zauberpferd spielen');
+  logic.switchTarget(s);
+  logic.transform(s);
+  assert.equal(logic.cycleHumanPace(s),true);
+});
