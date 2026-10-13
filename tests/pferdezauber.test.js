@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync('src/games/pferdezauber.js', 'utf8');
 const sandbox = { globalThis: { Arcade: { games: {} } } };
+vm.runInNewContext(fs.readFileSync('src/games/pferdezauber-world.js', 'utf8'), sandbox);
 vm.runInNewContext(source, sandbox);
 const logic = sandbox.globalThis.Arcade.pferdezauberLogic;
 
@@ -236,4 +237,54 @@ test('magic transformation is independent from controlling the companion horse',
   logic.switchTarget(s);
   logic.transform(s);
   assert.equal(logic.cycleHumanPace(s),true);
+});
+
+test('living world has three herds plus pony and foal groups', () => {
+  const s=logic.newState('duo');
+  const stats=logic.world.stats(s.ambient);
+  assert.deepEqual({...stats},{horseHerds:3,horseGroups:5,horses:17,people:8,rabbits:6,birds:10});
+  assert.equal(logic.world.groups.length,5);
+  assert.equal(logic.world.groups[3].horses.includes('shetland'),true);
+  assert.equal(logic.world.groups[4].horses.includes('foal-black'),true);
+});
+
+test('herd animals remain inside their pastures while moving', () => {
+  const state=logic.newState('duo');
+  const originalX=state.ambient.horses.map(p=>p.x);
+  logic.world.tick(state.ambient,100,.1);
+  const changed=state.ambient.horses.filter((p,i)=>Math.abs(p.x-originalX[i])>.05).length;
+  assert.ok(changed>3);
+  for(const p of state.ambient.horses) {
+    const g=logic.world.groups[p.herd];
+    assert.ok(Math.hypot(p.x-g.x,p.z-g.z)<=g.r+.00001,'horse stayed near the correct herd');
+    assert.equal(p.form,'horse');
+    assert.equal(p.kind,'horse');
+  }
+});
+
+test('wandering people, rabbits and birds change position independently of the player', () => {
+  const state=logic.newState('horseOnly','friesian');
+  const before=state.ambient.people[0].x;
+  const rabbit=state.ambient.rabbits[0].x;
+  const bird=state.ambient.birds[0].x;
+  logic.world.tick(state.ambient,13,.15);
+  assert.notEqual(state.ambient.people[0].x,before);
+  assert.notEqual(state.ambient.rabbits[0].x,rabbit);
+  assert.notEqual(state.ambient.birds[0].x,bird);
+  assert.equal(state.active,'player');
+  assert.equal(state.player.form,'horse');
+  assert.equal(state.quest,'meet');
+});
+
+test('solo quest resets independently of the wildlife and herd population', () => {
+  const first=logic.newState('duo');
+  const horse=first.ambient.horses[0];
+  horse.x=1000;
+  first.quest='escort';
+  const second=logic.newState('duo');
+  assert.equal(second.quest,'meet');
+  assert.ok(second.ambient.horses[0].x<100);
+  assert.equal(logic.world.stats(second.ambient).horses,17);
+  assert.equal(logic.switchTarget(second),true);
+  assert.equal(second.active,'companion');
 });
