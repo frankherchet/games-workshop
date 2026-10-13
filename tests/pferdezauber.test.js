@@ -288,3 +288,90 @@ test('solo quest resets independently of the wildlife and herd population', () =
   assert.equal(logic.switchTarget(second),true);
   assert.equal(second.active,'companion');
 });
+
+
+test('a nearby human can mount an adult horse and dismount beside it', () => {
+  const state=logic.newState('duo','friesian');
+  const horse=state.companion;
+  horse.x=state.player.x+1;horse.z=state.player.z+.3;
+  assert.equal(logic.mountOrDismount(state),'mounted');
+  assert.equal(state.mounted,true);
+  assert.equal(state.active,'companion');
+  assert.equal(state.player.form,'human');
+  assert.equal(state.player.x,horse.x);
+  assert.equal(state.player.z,horse.z);
+  assert.equal(logic.movementSpeed(state),2.7*logic.horseById('friesian').speed);
+  horse.x=10;horse.z=7;horse.heading=.7; // horse moved under control
+  assert.equal(logic.mountOrDismount(state),'dismounted');
+  assert.equal(state.active,'player');
+  assert.equal(state.mounted,false);
+  assert.equal(state.player.form,'human');
+  assert.ok(Math.hypot(state.player.x-horse.x,state.player.z-horse.z)>1);
+  assert.ok(Math.hypot(state.player.x-horse.x,state.player.z-horse.z)<2);
+});
+
+test('dismounting mid-jump with M or Q leaves both figures on the ground', () => {
+  for (const dismount of [logic.mountOrDismount, logic.switchTarget]) {
+    const state=logic.newState('duo','haflinger');
+    assert.equal(logic.mountOrDismount(state),'mounted');
+    state.companion.jump=.3;
+    state.player.jump=.3;
+    dismount(state);
+    assert.equal(state.mounted,false);
+    assert.equal(state.active,'player');
+    assert.equal(state.player.jump,0);
+    assert.equal(state.companion.jump,0);
+  }
+});
+
+test('mounting requires the human to be within reach of their horse', () => {
+  const state=logic.newState('duo','haflinger');
+  state.companion.x=24;state.companion.z=26;
+  assert.equal(logic.mountOrDismount(state),'tooFar');
+  assert.equal(state.active,'player');
+  assert.equal(state.mounted,false);
+  state.companion.x=state.player.x+2.5;
+  state.companion.z=state.player.z;
+  assert.equal(logic.mountOrDismount(state),'mounted');
+});
+
+test('foals are not rideable, including when in a human-plus-foal mode', () => {
+  for (const foal of ['foal-brown','foal-black']) {
+    const state=logic.newState('duo',foal);
+    state.companion.x=state.player.x;
+    state.companion.z=state.player.z;
+    assert.equal(logic.mountOrDismount(state),'foal');
+    assert.equal(state.mounted,false);
+    assert.equal(state.active,'player');
+  }
+  assert.equal(logic.mountOrDismount(logic.newState('horseOnly','haflinger')),'horseOnly');
+});
+
+test('pony can be ridden and transformation is blocked while seated', () => {
+  const state=logic.newState('duo','shetland');
+  state.companion.x=state.player.x;
+  state.companion.z=state.player.z;
+  assert.equal(logic.mountOrDismount(state),'mounted');
+  assert.equal(logic.transform(state),false);
+  assert.equal(state.player.form,'human');
+  // Q while riding also dismounts instead of switching to a ground-level human.
+  assert.equal(logic.switchTarget(state),true);
+  assert.equal(state.mounted,false);
+  assert.equal(state.active,'player');
+  assert.equal(logic.transform(state),true);
+  assert.equal(logic.mountOrDismount(state),'needHuman');
+});
+
+test('mounted rider does not alter the solo NPC world or rescue quest', () => {
+  const state=logic.newState('duo','welsh');
+  const count=logic.world.stats(state.ambient);
+  state.companion.x=state.player.x;
+  state.companion.z=state.player.z;
+  assert.equal(logic.mountOrDismount(state),'mounted');
+  assert.equal(state.quest,'meet');
+  assert.deepEqual({...logic.world.stats(state.ambient)},{...count});
+  assert.equal(logic.objective(state).title.includes('Fohlen'),true);
+  assert.equal(logic.dismount(state),true);
+  assert.equal(logic.dismount(state),false);
+  assert.equal(state.quest,'meet');
+});

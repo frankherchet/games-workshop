@@ -27,18 +27,43 @@
       mode: MODES.includes(mode) ? mode : 'duo',
       player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, jump: 0, walk: 0 },
       companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', horseId: horseById(horseId).id, jump: 0, walk: 0 },
-      active: 'player', gait: 0, humanPace: 1, following: true, stars: [false, false, false],
+      active: 'player', gait: 0, humanPace: 1, following: true, mounted: false, stars: [false, false, false],
       quest: 'meet', trail: 0, foal: { x: -13, z: -12, heading: 0, form: 'horse', horseId: 'foal-brown', jump: 0, walk: 0 },
       ambient: root.Arcade.pferdezauberWorld.create(),
     };
   }
+  function dismount(s) {
+    if (!s.mounted) return false;
+    const horse=s.companion, side=1.45;
+    s.player.x=Math.max(-29,Math.min(29,horse.x+Math.cos(horse.heading)*side));
+    s.player.z=Math.max(-29,Math.min(29,horse.z-Math.sin(horse.heading)*side));
+    s.player.heading=horse.heading;
+    s.player.jump=0;
+    horse.jump=0;
+    s.mounted=false;
+    s.active='player';
+    return true;
+  }
+  function mountOrDismount(s) {
+    if(s.mode!=='duo')return 'horseOnly';
+    if(s.mounted) { dismount(s); return 'dismounted'; }
+    if(s.player.form!=='human')return 'needHuman';
+    if(horseById(s.companion.horseId).foal)return 'foal';
+    if(Math.hypot(s.player.x-s.companion.x,s.player.z-s.companion.z)>2.8)return 'tooFar';
+    s.mounted=true;
+    s.active='companion';
+    s.player.x=s.companion.x; s.player.z=s.companion.z;
+    s.player.heading=s.companion.heading;
+    return 'mounted';
+  }
   function switchTarget(s) {
     if (s.mode !== 'duo') return false;
+    if (s.mounted) return dismount(s);
     s.active = s.active === 'player' ? 'companion' : 'player';
     return true;
   }
   function transform(s) {
-    if (s.mode !== 'duo') return false;
+    if (s.mode !== 'duo' || s.mounted) return false;
     s.player.form = s.player.form === 'human' ? 'horse' : 'human';
     return true;
   }
@@ -60,6 +85,7 @@
   }
   function switchLabel(s) {
     if (s.mode !== 'duo') return '';
+    if (s.mounted) return '↧ Absteigen';
     return s.active === 'companion' ? (s.player.form === 'human' ? '🧍 Mensch spielen' : '✨ Zauberpferd spielen') : '🐎 Pferd spielen';
   }
   function distance(a,b) { return Math.hypot(a.x-b.x,a.z-b.z); }
@@ -105,7 +131,7 @@
       f.x+=dx/dist*step; f.z+=dz/dist*step; f.heading=Math.atan2(dx,dz); f.walk+=step/3;
     }
   }
-  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld };
+  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld, mountOrDismount, dismount };
 
 
   root.Arcade.games.pferdezauber = function ({ host }) {
@@ -124,11 +150,12 @@
       '  <canvas class="pz-canvas" tabindex="0" aria-label="Dreidimensionale Pferdewiese. Nutze Tastatur oder die Schaltflächen zur Steuerung."></canvas>',
       '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtsteine</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div><div class="pz-hudcard pz-hud-breed"><span>Dein Pferd</span><b data-breed>Haflinger</b></div></div>',
       '  <button class="pz-role-switch" type="button" data-act="switch" title="Als Pferd oder Mensch spielen (Q)" hidden>🐎 Pferd spielen</button>',
+      '  <button class="pz-mount-switch" type="button" data-act="mount" title="Auf- oder Absteigen (M)" hidden>🐴 Aufsteigen</button>',
       '  <div class="pz-notice" role="status" aria-live="polite" data-notice>Willkommen im Tal der Wandelwinde!</div>',
       '  <div class="pz-pad" aria-label="Bewegen"><button data-move="up" aria-label="Vorwärts">▲</button><div><button data-move="left" aria-label="Nach links">◀</button><button data-move="down" aria-label="Rückwärts">▼</button><button data-move="right" aria-label="Nach rechts">▶</button></div></div>',
       '  <div class="pz-actions"><button data-act="interact" title="Interagieren (E)">✋ <span>Interaktion</span></button><button data-act="pace" title="Tempo für Mensch wechseln (R)">🏃 <span>Rennen</span></button><button data-act="transform" title="Verwandeln (T)">✦ <span>Verwandeln</span></button><button data-act="gait" title="Pferde-Gangart (G)">♞ <span>Schritt</span></button><button data-act="jump" title="Springen (Leertaste)">↥ <span>Springen</span></button></div>',
       '  <div class="pz-entry" data-entry><div class="pz-entry-card"><span class="pz-eyebrow">DEIN ABENTEUER BEGINNT</span><h1>Pferdezauber</h1><p>Ein Fohlen ist verschwunden und die Lichtquelle verstummt. Mira zählt auf dich! Wähle deinen Modus und dein Lieblingspferd.</p>',
-      '   <div class="pz-choice" role="group" aria-label="Spielmodus"><button data-mode="duo" aria-pressed="true">🐴 Mensch + Pferd <small>Wechsle im Spiel jederzeit mit „Pferd spielen“ zum Pferd!</small></button><button data-mode="horseOnly" aria-pressed="false">🐎 Nur Pferd <small>Du steuerst sofort dein ausgewähltes Pferd</small></button></div>',
+      '   <div class="pz-choice" role="group" aria-label="Spielmodus"><button data-mode="duo" aria-pressed="true">🐴 Mensch + Pferd <small>Gehe zum Pferd, steige auf (M) oder spiele direkt als Pferd (Q)!</small></button><button data-mode="horseOnly" aria-pressed="false">🐎 Nur Pferd <small>Du steuerst sofort dein ausgewähltes Pferd</small></button></div>',
       '   <h2 class="pz-section-title">Wähle dein Pferd</h2>',
       '   <div class="pz-horses" role="group" aria-label="Fohlen, Ponys und Pferde">',horseCards,'   </div>',
       '   <p class="pz-selected" data-selection>Haflinger · Goldfuchs mit heller Mähne</p>',
@@ -138,7 +165,7 @@
       '  <div class="pz-error" data-error hidden></div>',
       ' </div>',
       ' <div class="pz-info"><p><strong>Deine neue Pferdewelt:</strong> Drei Pferdeherden, eine Ponygruppe und eine Fohlenwiese; dazu spazierende Menschen, Hasen und Vögel. Alle leben in deiner eigenen Einzelspielerwelt.</p><p><strong>Deine erste Mission:</strong> Hilf Mira, finde Lumi und führe das Fohlen sicher zum Stall. Danach erweckst du die Lichtquelle mit drei Fähigkeitssteinen. Der Wegweiser zeigt zum nächsten Ziel; aktiviere es mit E oder der goldenen Aktionsschaltfläche.</p>',
-      ' <div><strong>Selbst als Pferd spielen:</strong> Wähle zu Beginn „Nur Pferd“ oder tippe im Modus „Mensch + Pferd“ oben rechts auf „🐎 Pferd spielen“ (Tastatur <kbd>Q</kbd>). <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch: Gehen/Rennen/Sprinten · <kbd>G</kbd> Pferd: Schritt/Trab/Galopp · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Kamera: mit Maus oder Finger ziehen.</div>',
+      ' <div><strong>Aufs Pferd steigen:</strong> Im Modus „Mensch + Pferd“ neben dein Pony oder Pferd laufen und <kbd>M</kbd> oder „🐴 Aufsteigen“ drücken. Mit <kbd>M</kbd> wieder absteigen. <strong>Als Pferd spielen:</strong> <kbd>Q</kbd> oder „🐎 Pferd spielen“. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch-Tempo · <kbd>G</kbd> Pferdegangart · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Fohlen sind nicht reitbar.</div>',
       ' <div class="pz-more"><button data-act="follow">🐴 Begleiter: Folgen</button><button data-act="restart">↻ Neu beginnen</button></div>',
       ' <p class="pz-note">Dies ist eine erste spielbare Vorschau, noch kein fertiges Star-Stable-ähnliches Spiel. Aktuell werden weder Konten noch Online-Spielstände angelegt.</p></div>',
       '</div>',
@@ -161,6 +188,7 @@
     const wayfinder=shell.querySelector('[data-wayfinder]'), arrow=shell.querySelector('[data-arrow]'), distanceText=shell.querySelector('[data-distance]');
     const interactButton=shell.querySelector('[data-act="interact"]');
     const roleButton=shell.querySelector('.pz-role-switch');
+    const mountButton=shell.querySelector('.pz-mount-switch');
     const paceButton=shell.querySelector('[data-act="pace"]');
     const gaitButton=shell.querySelector('[data-act="gait"]');
     const PI = Math.PI;
@@ -177,7 +205,7 @@
       keys.clear(); updateHud();
       hint(mode === 'horseOnly'
         ? '🐎 Du spielst jetzt als Pferd! Mira wartet am Stall.'
-        : '🐎 Du willst das Pferd steuern? Tippe oben rechts auf „Pferd spielen“!');
+        : '🐴 Laufe zu deinem Pferd und steige mit M auf – oder spiele mit Q direkt als Pferd!');
       canvas.focus({preventScroll:true});
     }
     function updateObjective() {
@@ -199,10 +227,15 @@
       starText.textContent = collected(state) + ' / 3';
       breedText.textContent = horseById(state.companion.horseId).name;
       const controlled = state.active === 'player' ? state.player : state.companion;
-      activeText.textContent = state.active === 'companion' ? 'Begleitpferd' :
+      activeText.textContent = state.mounted ? 'Zu Pferd' : state.active === 'companion' ? 'Begleitpferd' :
         controlled.form === 'human' ? 'Mensch' : state.mode === 'horseOnly' ? 'Dein Pferd' : 'Zauberpferd';
-      roleButton.hidden = state.mode !== 'duo' || !started;
+      roleButton.hidden = state.mode !== 'duo' || !started || state.mounted;
       roleButton.textContent = switchLabel(state);
+      mountButton.hidden = state.mode !== 'duo' || !started;
+      const unrideable=horseById(state.companion.horseId).foal;
+      mountButton.disabled = !state.mounted && (unrideable || state.player.form !== 'human');
+      mountButton.textContent = state.mounted ? '↧ Absteigen' : unrideable ? '🐣 Fohlen nicht reitbar' : '🐴 Aufsteigen';
+      mountButton.setAttribute('aria-label',state.mounted?'Vom Pferd absteigen (M)':'Auf das Pferd steigen (M)');
       roleButton.setAttribute('aria-label', switchLabel(state) + ' (Q)');
       shell.querySelector('[data-act="transform"]').disabled = state.mode !== 'duo' || !started;
       paceButton.disabled = !started || controlled.form !== 'human';
@@ -219,8 +252,19 @@
       if (!started) return;
       if (act === 'interact') { const message=interact(state); if(message)hint(message); }
       if (act === 'switch') { if (switchTarget(state)) hint(state.active === 'companion' ? '🐎 Jetzt spielst du als dein Pferd! Bewegen mit WASD oder den Pfeiltasten.' : 'Jetzt spielst du als Mensch. Tempo ändern mit R.'); }
+      if (act === 'mount') {
+        const result=mountOrDismount(state);
+        hint({
+          mounted:'🐴 Du sitzt im Sattel! Mit WASD lenken, G für Gangarten, M zum Absteigen.',
+          dismounted:'Du bist abgestiegen. Dein Pferd wartet neben dir.',
+          tooFar:'Gehe näher zu deinem Pferd, um aufzusteigen.',
+          foal:'Fohlen sind nicht reitbar. Wähle ein Pony oder Großpferd.',
+          needHuman:'Verwandle dich zuerst zurück in einen Menschen (T).',
+          horseOnly:'Im Modus Nur Pferd steuerst du das Pferd direkt.'
+        }[result]);
+      }
       if (act === 'pace') { if (cycleHumanPace(state)) hint('Mensch-Tempo: ' + HUMAN_PACES[state.humanPace].label); }
-      if (act === 'transform') { if (transform(state)) hint(state.player.form === 'horse' ? 'Du bist jetzt ein Zauberpferd! ✨' : 'Zurückverwandelt: Du bist wieder Mensch!'); }
+      if (act === 'transform') { if (transform(state)) hint(state.player.form === 'horse' ? 'Du bist jetzt ein Zauberpferd! ✨' : 'Zurückverwandelt: Du bist wieder Mensch!'); else if(state.mounted)hint('Steige zuerst mit M vom Pferd ab.'); }
       if (act === 'gait' && controlled(state).form === 'horse') { state.gait = (state.gait + 1) % 3; hint('Pferde-Gangart: ' + ['Schritt','Trab','Galopp'][state.gait]); }
       if (act === 'follow') { state.following = !state.following; hint(state.following ? 'Dein Begleiter folgt dir.' : 'Dein Begleiter wartet.'); }
       if (act === 'jump') {
@@ -251,12 +295,13 @@
     function onKeyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey || !alive || !started || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
       const key = e.key.toLowerCase();
-      if (keyMap[key] || ['q','t','g','f','e','r',' '].includes(key)) e.preventDefault();
+      if (keyMap[key] || ['q','t','g','f','e','r','m',' '].includes(key)) e.preventDefault();
       if (keyMap[key]) keys.add(keyMap[key]);
       if (e.repeat) return;
       if (key === 'e') action('interact');
       if (key === 'q') action('switch');
       if (key === 'r') action('pace');
+      if (key === 'm') action('mount');
       if (key === 't') action('transform');
       if (key === 'g') action('gait');
       if (key === 'f') action('follow');
@@ -477,8 +522,25 @@
         limb(m,pose,side*.37,.105+lift,z+pace,.25,.21,.33,[.32,.33,.34]);
       }
       blob(m,pose,0,1.08+base,-1.02,.17,.25,.55,breed.mane);
-      // Saddle blanket on the companion makes the two horses distinguishable.
-      if(isCompanion)blob(m,pose,0,1.83+base,-.12,.55,.12,.66,[.35,.56,.70]);
+      // Tack stays attached to the personal companion; wild herds and foals
+      // are untacked. Cloth, saddle seat, girth and stirrups are 3D meshes.
+      if(isCompanion && !breed.foal) {
+        const leather=[.31,.19,.14],gold=[.85,.70,.39];
+        blob(m,pose,0,1.79+base,-.16,.58,.12,.63,[.28,.46,.62]); // saddle cloth
+        blob(m,pose,0,1.91+base,-.18,.43,.13,.51,leather); // leather saddle
+        blob(m,pose,0,2.01+base,-.32,.33,.08,.27,[.21,.14,.11]); // seat
+        limb(m,pose,0,1.37+base,-.15,.06,.65,.08,[.40,.26,.17]); // belly girth
+        for(const side of [-1,1]) {
+          limb(m,pose,side*.53,1.42+base,-.17,.06,.72,.06,leather); // stirrup straps
+          limb(m,pose,side*.53,1.04+base,-.12,.19,.055,.16,gold); // metal stirrups
+          limb(m,pose,side*.25,1.91+base-graze,1.15,.058,.47,.063,leather); // cheek straps
+          limb(m,pose,side*.25,2.02+base-graze,.98,.052,.36,.06,leather);
+          limb(m,pose,side*.34,1.91+base,.69,.04,.055,.86,leather); // reins to hands
+        }
+        limb(m,pose,0,1.70+base-graze,1.38,.55,.07,.07,leather); // noseband
+        limb(m,pose,0,2.08+base-graze,1.08,.59,.06,.07,leather); // browband
+        limb(m,pose,0,1.67+base-graze,1.35,.62,.065,.065,gold); // bit
+      }
     }
     function human(m,p) {
       const moving=Math.sin(p.walk*9),lift=p.jump>0?Math.sin(p.jump*PI/.78)*.75:0;
@@ -492,6 +554,26 @@
         limb(m,p,side*.19,.43+lift,k,.23,.82,.27,jeans);
         limb(m,p,side*.19,.09+lift,k+.12,.27,.18,.39,[.31,.33,.37]);
         limb(m,p,side*.43,1.20+lift,-k,.18,.76,.22,skin);
+      }
+    }
+    function rider(m,p,t) {
+      // A seated rider is rendered above the moving saddle, never at ground level.
+      const horseScale=horseById(p.horseId).size;
+      const bob=Math.sin(p.walk*9)*.035*horseScale;
+      const jump=p.jump>0?Math.sin(p.jump*PI/.78)*.8*horseScale:0;
+      const hips=horseScale*2.03+bob+jump,pose={x:p.x,z:p.z,heading:p.heading};
+      const shirt=[.59,.44,.70],skin=[.91,.71,.56],jeans=[.30,.43,.62];
+      blob(m,pose,0,hips,-.22,.35,.21,.30,jeans); // hips resting on seat
+      limb(m,pose,0,hips+.54,-.08,.56,.87,.34,shirt);
+      blob(m,pose,0,hips+1.20,.02,.27,.30,.26,skin);
+      blob(m,pose,0,hips+1.46,-.06,.29,.17,.29,[.32,.23,.22]);
+      for(const side of [-1,1]) {
+        // Bent legs lie on opposite sides of the horse's body, feet in stirrups.
+        limb(m,pose,side*.39,hips-.27,-.03,.24,.67,.29,jeans);
+        limb(m,pose,side*.52,hips-.65,-.13,.25,.21,.37,[.20,.23,.25]);
+        // Arms reach forward to hold the reins.
+        limb(m,pose,side*.38,hips+.44,.24,.18,.67,.20,skin);
+        blob(m,pose,side*.35,hips+.13,.55,.11,.11,.11,skin);
       }
     }
     function sparkle(m,s,t) {
@@ -555,10 +637,13 @@
       const m=mesh();
       // A soft ground shadow anchors the stylised figures to the meadow.
       for(const p of state.mode==='duo'?[state.player,state.companion]:[state.player]) {
-        const s=p.form==='horse'?horseById(p.horseId).size:1;
-        ellipsoid(m,p.x,.01,p.z,.73*s,.022,.87*s,[.33,.52,.32]);
+        // The mounted human is drawn by rider() on top of the companion.
+        if(state.mounted && p===state.player)continue;
+        const scale=p.form==='horse'?horseById(p.horseId).size:1;
+        ellipsoid(m,p.x,.01,p.z,.73*scale,.022,.87*scale,[.33,.52,.32]);
         if(p.form==='human')human(m,p);else horse(m,p,t,p===state.companion);
       }
+      if(state.mounted)rider(m,state.companion,t);
       human(m,KEEPER);
       if(state.quest!=='meet' && state.quest!=='trail') {
         const foal=state.quest==='escort'||state.quest==='foal'?state.foal:{...state.foal,x:-12,z:7};
@@ -637,6 +722,11 @@
         const dx=entity.x-other.x,dz=entity.z-other.z,dist=Math.hypot(dx,dz);
         if(dist>2.5)move(other,dx,dz,Math.min(5,2.6+(dist-2.5)*.65),dt);
       }
+      if(state.mounted) {
+        state.player.x=state.companion.x;state.player.z=state.companion.z;
+        state.player.heading=state.companion.heading;
+        state.player.jump=state.companion.jump;
+      }
       advanceFoal(state,dt);
       root.Arcade.pferdezauberWorld.tick(state.ambient,t,dt);
       updateObjective();
@@ -653,7 +743,7 @@
       gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       const entity=state.active==='player'?state.player:state.companion;
       camX+=(entity.x-camX)*Math.min(1,dt*7);camZ+=(entity.z-camZ)*Math.min(1,dt*7);
-      const visualHeight=entity.form==='human'?1.15:Math.max(.75,horseById(entity.horseId).size*1.15);
+      const visualHeight=state.mounted ? horseById(entity.horseId).size*2.35 : entity.form==='human'?1.15:Math.max(.75,horseById(entity.horseId).size*1.15);
       const eye=[camX-Math.sin(cameraYaw)*8.8,4.1+visualHeight,camZ-Math.cos(cameraYaw)*8.8];
       gl.uniformMatrix4fv(uPV,false,multiply(perspective(w/h),lookAt(eye,[camX,visualHeight,camZ])));
       draw(staticBuffer,null,gl.STATIC_DRAW);
