@@ -630,14 +630,16 @@
     function leadRope(m) {
       const h=state.companion,p=state.player;
       const profile=horseById(h.horseId);
-      const humanHand=local(p,.42,1.05,.48);
+      const handY=1.05+(p.jump>0?Math.sin(p.jump*PI/.78)*.75:0);
+      const humanHand=local(p,.42,handY,.48);
       const hPose={...h,horseScale:profile.size};
-      const bit=local(hPose,.12,1.68,1.34);
+      const base=Math.sin(h.walk*9)*.035+(h.jump>0?Math.sin(h.jump*PI/.78)*.8:0);
+      const bit=local(hPose,.12,(profile.foal?1.60:1.68)+base,profile.foal?1.38:1.34);
       const middle=humanHand.map((q,i)=>(q+bit[i])/2);
       middle[1]-=.16;
       cord(m,humanHand,middle,.027,[.33,.21,.14]);
       cord(m,middle,bit,.027,[.33,.21,.14]);
-      blob(m,p,.42,1.05,.48,.09,.09,.09,[.91,.71,.56]);
+      blob(m,p,.42,handY,.48,.09,.09,.09,[.91,.71,.56]);
     }
     function horse(m,p,t,isCompanion) {
       const breed=horseById(p.horseId);
@@ -662,8 +664,19 @@
         limb(m,pose,side*.37,.105+lift,z+pace,.25,.21,.33,[.32,.33,.34]);
       }
       blob(m,pose,0,1.08+base,-1.02,.17,.25,.55,breed.mane);
-      // Tack stays attached to the personal companion; wild herds and foals
-      // are untacked. Cloth, saddle seat, girth and stirrups are 3D meshes.
+      // Companion foals wear a leading halter, never a saddle or bit.
+      if(isCompanion && breed.foal) {
+        const leather=[.31,.19,.14];
+        for(const side of [-1,1]) {
+          limb(m,pose,side*.28,1.92+base,1.12,.06,.48,.07,leather);
+          limb(m,pose,side*.28,2.06+base,.94,.06,.36,.07,leather);
+        }
+        limb(m,pose,0,2.20+base,.92,.62,.07,.07,leather);
+        limb(m,pose,0,1.70+base,1.38,.63,.08,.08,leather);
+        limb(m,pose,0,1.59+base,1.38,.56,.06,.07,leather);
+        blob(m,pose,.12,1.60+base,1.38,.07,.07,.07,[.85,.70,.39]);
+      }
+      // Riding tack stays attached to adult companions; wild herds are untacked.
       if(isCompanion && !breed.foal) {
         const leather=[.31,.19,.14],gold=[.85,.70,.39];
         blob(m,pose,0,1.79+base,-.16,.58,.12,.63,[.28,.46,.62]); // saddle cloth
