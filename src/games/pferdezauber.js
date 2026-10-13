@@ -29,6 +29,7 @@
       companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', horseId: horseById(horseId).id, jump: 0, walk: 0 },
       active: 'player', gait: 0, humanPace: 1, following: true, stars: [false, false, false],
       quest: 'meet', trail: 0, foal: { x: -13, z: -12, heading: 0, form: 'horse', horseId: 'foal-brown', jump: 0, walk: 0 },
+      ambient: root.Arcade.pferdezauberWorld.create(),
     };
   }
   function switchTarget(s) {
@@ -104,7 +105,7 @@
       f.x+=dx/dist*step; f.z+=dz/dist*step; f.heading=Math.atan2(dx,dz); f.walk+=step/3;
     }
   }
-  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES };
+  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld };
 
 
   root.Arcade.games.pferdezauber = function ({ host }) {
@@ -116,7 +117,8 @@
     }).join('');
     const html = [
       '<div class="pz">',
-      ' <div class="pz-top"><a href="#alle" class="pz-back">← Zur Spieleübersicht</a><div><span class="pz-spark">✦</span> PFERDEZAUBER <small>Das verschwundene Fohlen</small></div></div>',
+      ' <div class="pz-top"><a href="#alle" class="pz-back">← Zur Spieleübersicht</a><div><span class="pz-spark">✦</span> PFERDEZAUBER <small>Lebendige Pferdewelt · Das verschwundene Fohlen</small></div></div>',
+      ' <p class="pz-population" aria-label="Bewohner der Pferdewelt">🐎 3 Pferdeherden · 🐴 Ponys &amp; Fohlen · 🧑 8 Menschen · 🐇 Hasen · 🐦 Vögel</p>',
       ' <section class="pz-quest" aria-label="Dein Abenteuer"><div><h2 data-quest-title role="status" aria-live="polite"></h2><p data-quest-text></p></div><div class="pz-wayfinder" data-wayfinder><span data-arrow aria-hidden="true">↑</span><b data-distance></b></div></section>',
       ' <div class="pz-scene">',
       '  <canvas class="pz-canvas" tabindex="0" aria-label="Dreidimensionale Pferdewiese. Nutze Tastatur oder die Schaltflächen zur Steuerung."></canvas>',
@@ -135,7 +137,7 @@
       '  </div></div>',
       '  <div class="pz-error" data-error hidden></div>',
       ' </div>',
-      ' <div class="pz-info"><p><strong>Deine erste Mission:</strong> Hilf Mira, finde Lumi und führe das Fohlen sicher zum Stall. Danach erweckst du die Lichtquelle mit drei Fähigkeitssteinen. Der Wegweiser zeigt zum nächsten Ziel; aktiviere es mit E oder der goldenen Aktionsschaltfläche.</p>',
+      ' <div class="pz-info"><p><strong>Deine neue Pferdewelt:</strong> Drei Pferdeherden, eine Ponygruppe und eine Fohlenwiese; dazu spazierende Menschen, Hasen und Vögel. Alle leben in deiner eigenen Einzelspielerwelt.</p><p><strong>Deine erste Mission:</strong> Hilf Mira, finde Lumi und führe das Fohlen sicher zum Stall. Danach erweckst du die Lichtquelle mit drei Fähigkeitssteinen. Der Wegweiser zeigt zum nächsten Ziel; aktiviere es mit E oder der goldenen Aktionsschaltfläche.</p>',
       ' <div><strong>Selbst als Pferd spielen:</strong> Wähle zu Beginn „Nur Pferd“ oder tippe im Modus „Mensch + Pferd“ oben rechts auf „🐎 Pferd spielen“ (Tastatur <kbd>Q</kbd>). <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch: Gehen/Rennen/Sprinten · <kbd>G</kbd> Pferd: Schritt/Trab/Galopp · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Kamera: mit Maus oder Finger ziehen.</div>',
       ' <div class="pz-more"><button data-act="follow">🐴 Begleiter: Folgen</button><button data-act="restart">↻ Neu beginnen</button></div>',
       ' <p class="pz-note">Dies ist eine erste spielbare Vorschau, noch kein fertiges Star-Stable-ähnliches Spiel. Aktuell werden weder Konten noch Online-Spielstände angelegt.</p></div>',
@@ -304,7 +306,8 @@
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
       return s;
     }
-    let prog, staticBuffer, dynamicBuffer;
+    let prog, staticBuffer, dynamicBuffer, ambientBuffer;
+    let ambientVertexCount=0, ambientLastUpdate=0;
     try {
       prog = gl.createProgram();
       gl.attachShader(prog, shader(gl.VERTEX_SHADER,
@@ -323,7 +326,7 @@
     const uPV = gl.getUniformLocation(prog, 'uPV');
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.72, 0.86, 0.91, 1);
-    staticBuffer = gl.createBuffer(); dynamicBuffer = gl.createBuffer();
+    staticBuffer = gl.createBuffer(); dynamicBuffer = gl.createBuffer(); ambientBuffer=gl.createBuffer();
     function mesh() { return { a: [] }; }
     function vert(m, p, n, c) { m.a.push(p[0],p[1],p[2],n[0],n[1],n[2],c[0],c[1],c[2]); }
     function tri(m, p, q, r, n, c) { vert(m,p,n,c);vert(m,q,n,c);vert(m,r,n,c); }
@@ -410,6 +413,28 @@
         box(m,x,.12,z,.045,.24,.045,[.31,.58,.32]);
         ellipsoid(m,x,.26,z,.15,.11,.15,c);
       }
+      // Stable yard: hay stacks, troughs, shrub beds and logs.
+      for(let i=0;i<17;i++){
+        const x=-21+(i%6)*2.1,z=10+Math.floor(i/6)*1.7;
+        if(x>-14 && z<12)continue;
+        box(m,x,.36,z,1.05,.72,.72,[.84,.70,.40],i*.23);
+        box(m,x,.73,z,.95,.065,.78,[.68,.51,.29],i*.23);
+      }
+      for(const [x,z] of [[-8,15],[7,14],[18,-23]]){
+        box(m,x,.45,z,2.2,.8,1.1,[.39,.31,.25]);
+        box(m,x,.88,z,1.9,.09,.86,[.43,.72,.79]);
+      }
+      for(let i=0;i<48;i++){
+        const x=-29+((i*17)%58),z=-29+((i*31+9)%57);
+        if(Math.abs(x)<4 || (x>-13&&x<-5&&z>0&&z<10))continue;
+        const h=.32+(i%3)*.10;
+        ellipsoid(m,x,h*.60,z,.38+(i%4)*.12,h,.4+(i%3)*.12,i%2?[.32,.60,.37]:[.26,.52,.36]);
+      }
+      for(let i=0;i<24;i++){
+        const x=-27+(i*11)%54,z=-24+(i*19)%46;
+        if(Math.abs(x)<4)continue;
+        ellipsoid(m,x,.19,z,.30,.20,.34,[.64,.65,.60]);
+      }
       return new Float32Array(m.a);
     }
     const ground=worldMesh();
@@ -435,11 +460,11 @@
       const pose={...p,horseScale:breed.size};
       // All geometric dimensions are scaled, while foals have proportionally larger heads.
       // body proportions use y offsets while the whole horse can jump
-      const base=lift+bob;
+      const base=lift+bob,graze=p.kind==='horse'?Math.max(0,Math.sin(t*.66+p.phase))*.25:0;
       blob(m,pose,0,1.38+base,0,.56,.49,.95,fur);
       blob(m,pose,0,1.65+base,.60,.32,.59,.36,fur);
-      blob(m,pose,0,1.89+base,.96,breed.foal?.39:.33,breed.foal?.40:.34,.43,fur);
-      blob(m,pose,0,1.71+base,1.26,.30,.20,.34,breed.muzzle);
+      blob(m,pose,0,1.89+base-graze,.96,breed.foal?.39:.33,breed.foal?.40:.34,.43,fur);
+      blob(m,pose,0,1.71+base-graze,1.26,.30,.20,.34,breed.muzzle);
       for(const side of [-1,1]){
         blob(m,pose,side*.19,2.21+base,.92,.115,.25,.11,fur);
         blob(m,pose,side*.27,1.96+base,1.21,.055,.055,.05,[.14,.16,.18]);
@@ -456,7 +481,8 @@
     }
     function human(m,p) {
       const moving=Math.sin(p.walk*9),lift=p.jump>0?Math.sin(p.jump*PI/.78)*.75:0;
-      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:[.59,.44,.70],jeans=[.34,.49,.62];
+      const shirts=[[.28,.59,.55],[.76,.47,.48],[.36,.49,.73],[.79,.67,.42]];
+      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:p.style===undefined?[.59,.44,.70]:shirts[p.style%shirts.length],jeans=[.34,.49,.62];
       limb(m,p,0,1.26+lift,0,.62,.78,.37,shirt);
       blob(m,p,0,1.91+lift,.01,.29,.33,.27,skin);
       blob(m,p,0,2.15+lift,-.07,.32,.20,.31,[.36,.25,.22]);
