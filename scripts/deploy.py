@@ -39,7 +39,7 @@ def assets_for(dist):
         raise ValueError('Invalid asset manifest.')
     assets = []
     for name in manifest:
-        if not isinstance(name, str) or not re.fullmatch(r'assets/(?:garden-fine|garden-sprites)-[a-f0-9]{12}\.png', name):
+        if not isinstance(name, str) or not re.fullmatch(r'assets/(?:garden-fine|garden-sprites|garden-defenses|garden-extras)-[a-f0-9]{12}\.png', name):
             raise ValueError('Unsupported asset path.')
         asset = dist / name
         if not asset.is_file() or asset.is_symlink() or asset.resolve().parent != (dist / 'assets').resolve():
@@ -148,3 +148,4 @@ if __name__ == '__main__':
         # Server exception text may echo account information. Do not print it.
         print(f'Deployment failed ({type(error).__name__}). Check configuration, permissions, FTPS and the target directory.', file=sys.stderr)
         sys.exit(1)
+

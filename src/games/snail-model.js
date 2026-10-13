@@ -16,25 +16,34 @@
     moon: { name: 'Mondlilie', price: 30, yield: 10, hp: 5, color: '#b9adf4', rarity: 'Selten', level: 1 },
     crystal: { name: 'Kristallrose', price: 55, yield: 17, hp: 6, color: '#92e5ea', rarity: 'Sehr selten', level: 2 }
   };
+  const WEAPONS={
+    hoe:{name:'Hacke',price:0,range:78,factor:1,bonus:0,targets:1,description:'Deine bewährte Hacke. Ein Ziel pro Schlag.'},
+    rake:{name:'Gartenrechen',price:48,range:92,factor:1.4,bonus:0,targets:2,description:'Trifft bis zu zwei Schnecken vor dir. Größere Reichweite, längerer Cooldown.'},
+    mallet:{name:'Eichenkeule',price:72,range:66,factor:1.6,bonus:2,targets:1,description:'Zwei Zusatzschaden. Kurze Reichweite und langsamer Schlag.'},
+    sickle:{name:'Dornen-Sichel',price:90,range:72,factor:.75,bonus:0,targets:1,description:'Schnelle Einzelschläge. Etwas weniger Reichweite als die Hacke.'}
+  };
   const ITEMS = {
     pit: { name: 'Fanggrube', price: 12, description: 'Fängt 3 Schnecken. Hält 3 Nächte.', charges: 3, hp: 1, life: 3 },
     beer: { name: 'Bierfalle', price: 18, description: 'Lockt nahe Schnecken an. 4 Fänge, 3 Nächte.', charges: 4, hp: 1, life: 3 },
     fence: { name: 'Holzzaun', price: 14, description: 'Blockiert den Weg. Reparierbar; verfällt nach 5 Nächten.', charges: 0, hp: 55, life: 5 },
     electric: { name: 'Elektrozaun', price: 35, description: 'Tötet 5 Schnecken. Hält 4 Nächte.', charges: 5, hp: 1, life: 4 },
     copper: { name: 'Kupferband', price: 16, description: 'Verlangsamt Schnecken in seiner Nähe. 4 Nächte.', charges: 0, hp: 1, life: 4 },
-    duck: { name: 'Laufente', price: 48, description: 'Jagt im Umkreis. Braucht pro Nacht eine Portion Futter.', charges: 0, hp: 1, life: 999 },
+    duck: { name: 'Laufente', price: 48, description: 'Verfolgt Schnecken im Garten und pickt aus der Nähe. Braucht pro Nacht eine Portion Futter.', charges: 0, hp: 1, life: 999 },
+    thorn:{name:'Dornenfalle',price:24,description:'Verletzt Schnecken bei Kontakt. 6 Treffer, 4 Nächte.',charges:6,hp:1,life:4},
+    resin:{name:'Harztopf',price:26,description:'Verlangsamt Schnecken im Umkreis stark. 3 Nächte.',charges:0,hp:1,life:3},
+    lantern:{name:'Köderlaterne',price:32,description:'Lockt weit entfernte Schnecken an. Fängt 3 Schnecken, 3 Nächte.',charges:3,hp:1,life:3},
     food: { name: 'Entenfutter', price: 4, description: 'Eine Portion für eine Ente und eine Nacht.' }
   };
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const price = (s, amount) => Math.ceil(amount * DIFFICULTIES[s.difficulty].price);
   const living = s => s.plots.filter(p => p.type);
   const lossLimit = s => 6 + Math.floor(s.nights / 2);
-  const cooldown = s => Math.max(.35, DIFFICULTIES[s.difficulty].cooldown - s.haste * .18);
+  const cooldown = s => Math.max(.35, (DIFFICULTIES[s.difficulty].cooldown - s.haste * .18)*(WEAPONS[s.weapon||'hoe']?.factor||1));
   const phaseName = s => s.over ? 'Runde beendet' : s.phase === 'night' ? 'Nacht' : s.dayTime < 60 ? 'Morgens' : s.dayTime < 120 ? 'Mittags' : 'Abends';
 
   const PLOT_COUNT=24;
   const plotPosition=i=>({x:310+(i%6)*52,y:245+Math.floor(i/6)*52});
-  const expansionPrice=s=>55+Math.max(0,(s.plots.filter(p=>p.unlocked).length-6)/3)*15;
+  const expansionPrice=s=>55+Math.max(0,(s.plots.filter(p=>p.unlocked).length-9)/3)*15;
   function reward(s,amount,point){
     if(amount<=0)return;
     s.money+=amount;
@@ -44,11 +53,11 @@
   function newRun(level = 0, difficulty = 'medium', character = 'gardener') {
     if (!LEVELS[level] || !DIFFICULTIES[difficulty] || !['gardener', 'gardeneress', 'fox'].includes(character)) throw new Error('Invalid run settings');
     return {
-      version: 2, level, difficulty, character, phase: 'day', dayTime: 0, nightTime: 0, nights: 0,
-      money: DIFFICULTIES[difficulty].money, eaten: 0, dryLost: 0, kills: 0, damage: 1, haste: 0, cooldown: 0,
+      version: 4, level, difficulty, character, phase: 'day', dayTime: 0, nightTime: 0, nights: 0,
+      weapon: 'hoe', money: DIFFICULTIES[difficulty].money, eaten: 0, dryLost: 0, kills: 0, damage: 1, haste: 0, cooldown: 0,
       player: { x: 465, y: 510, dx: 0, dy: -1 },
-      plots: Array.from({ length: PLOT_COUNT }, (_, i) => ({ ...plotPosition(i), unlocked: i < 6, type: i < 6 ? 'daisy' : null, hp: i < 6 ? 3 : 0, watered: false, dry: 0 })),
-      inventory: { daisy: 3, tulip: 0, moon: 0, crystal: 0, pit: 0, beer: 0, fence: 0, electric: 0, copper: 0, duck: 0, food: 1 },
+      plots: Array.from({ length: PLOT_COUNT }, (_, i) => ({ ...plotPosition(i), unlocked: i < 9, type: i < 6 ? 'daisy' : null, hp: i < 6 ? 3 : 0, watered: false, dry: 0 })),
+      inventory: { hoe:1,rake:0,mallet:0,sickle:0,thorn:0,resin:0,lantern:0,daisy: 3, tulip: 0, moon: 0, crystal: 0, pit: 0, beer: 0, fence: 0, electric: 0, copper: 0, duck: 0, food: 1 },
       coinEvents: [], structures: [], snails: [], spawned: 0, waveTotal: 0, spawnClock: 0, nextId: 1, over: false, reason: '',
       notice: 'Gieße deine sechs Sonnensterne. Der Stand steht oben rechts.', lastIncome: 0, lastAction: 0, attackFlash: 0
     };
@@ -85,17 +94,18 @@
   }
   function buy(s, id, unlockedLevel = s.level) {
     if (s.phase !== 'day' || s.over) return false;
+    if(WEAPONS[id]&&s.inventory[id]){s.weapon=id;s.notice=WEAPONS[id].name+' ausgerüstet.';return true;}
     let cost;
     if (id === 'damage') { if (s.damage >= 4) return false; cost = price(s, 35 * s.damage); }
     else if (id === 'haste') { if (s.haste >= 4) return false; cost = price(s, 30 * (s.haste + 1)); }
     else if (id === 'expand') { if (s.plots.every(p => p.unlocked)) return false; cost = price(s, expansionPrice(s)); }
-    else { const entry = PLANTS[id] || ITEMS[id]; if (!entry || (PLANTS[id] && entry.level > unlockedLevel)) return false; cost = price(s, entry.price); }
+    else { const entry = PLANTS[id] || ITEMS[id] || WEAPONS[id]; if (!entry || (PLANTS[id] && entry.level > unlockedLevel)) return false; cost = price(s, entry.price); }
     if (s.money < cost) { s.notice = 'Dafür fehlen dir noch Münzen.'; return false; }
     s.money -= cost;
     if (id === 'damage') s.damage++;
     else if (id === 'haste') s.haste++;
     else if (id === 'expand') { let count = 0; for (const p of s.plots) if (!p.unlocked && count++ < 3) p.unlocked = true; }
-    else s.inventory[id]++;
+    else {s.inventory[id]++;if(WEAPONS[id])s.weapon=id;}
     s.notice = id === 'expand' ? 'Drei neue Pflanzplätze sind bereit. Kaufe Samen und pflanze sie ein.' : 'Einkauf verstaut. Samen und Fallen kannst du jetzt auswählen.';
     return true;
   }
@@ -110,6 +120,14 @@
       s.inventory[seed]--; p.type = seed; p.hp = PLANTS[seed].hp; p.watered = true; p.dry = 0; s.notice = `${PLANTS[seed].name} gepflanzt und gegossen.`;
     }
     s.lastAction = .35; return true;
+  }
+  function plant(s,point,seed='daisy'){
+    if(s.over||s.phase!=='day')return false;
+    const p=s.plots.slice().sort((a,b)=>dist(a,point)-dist(b,point))[0];
+    if(!p||dist(p,point)>40||dist(p,s.player)>100){s.notice=s.plots.some(p=>p.unlocked&&!p.type)?'Gehe näher an ein leeres Erdbeet heran.':'Alle offenen Beete sind belegt. Erweitere den Garten am Stand.';return false;}
+    if(!p.unlocked){s.notice='Dieser Platz ist gesperrt. Kaufe am Stand eine Gartenerweiterung.';return false;}
+    if(p.type){s.notice='Dieser Platz ist bereits bepflanzt. Wähle ein leeres Erdbeet.';return false;}
+    return tend(s,p,seed);
   }
   function place(s, type, point) {
     if (s.phase !== 'day' || s.over || !ITEMS[type] || type === 'food' || !s.inventory[type]) return false;
@@ -137,9 +155,9 @@
   function attack(s) {
     if (s.phase !== 'night' || s.over || s.cooldown > 0) return false;
     s.cooldown = cooldown(s); s.attackFlash = .22;
-    const target = s.snails.filter(n => n.hp > 0 && dist(n, s.player) < 78 &&
-      ((n.x - s.player.x) * s.player.dx + (n.y - s.player.y) * s.player.dy >= -8)).sort((a, b) => dist(a, s.player) - dist(b, s.player))[0];
-    if (target) { const damage = s.damage; if (target.hp <= damage) kill(s, target); else target.hp -= damage; }
+    const weapon=WEAPONS[s.weapon||'hoe']||WEAPONS.hoe;
+    const targets=s.snails.filter(n=>n.hp>0&&dist(n,s.player)<weapon.range&&((n.x-s.player.x)*s.player.dx+(n.y-s.player.y)*s.player.dy>=-8)).sort((a,b)=>dist(a,s.player)-dist(b,s.player)).slice(0,weapon.targets);
+    for(const target of targets){const damage=s.damage+weapon.bonus;if(target.hp<=damage)kill(s,target);else target.hp-=damage;}
     return true;
   }
   function spawn(s, random = Math.random) {
@@ -154,6 +172,20 @@
       speed: stats[1] * DIFFICULTIES[s.difficulty].speed, reward: stats[2], bite: stats[3], timer: 0, dx: 0, dy: 1 });
     s.spawned++;
   }
+  function updateDucks(s,dt){
+    for(const item of s.structures){
+      if(item.type!=='duck')continue;
+      if(!Number.isFinite(item.homeX))item.homeX=item.x;if(!Number.isFinite(item.homeY))item.homeY=item.y;
+      item.homeX=Math.max(115,Math.min(845,item.homeX));item.homeY=Math.max(190,Math.min(530,item.homeY));
+      item.timer=Math.max(0,(item.timer||0)-dt);
+      const prey=s.phase==='night'&&item.fed?s.snails.filter(n=>n.hp>0).sort((a,b)=>dist(a,item)-dist(b,item))[0]:null;
+      const destination=prey||{x:item.homeX+(s.phase==='day'?Math.sin(s.dayTime*.55+item.id)*15:0),y:item.homeY+(s.phase==='day'?Math.cos(s.dayTime*.4+item.id)*10:0)};
+      const distance=dist(item,destination),stop=prey?22:1,speed=prey?90:24;
+      item.dx=0;item.dy=0;
+      if(distance>stop){item.dx=(destination.x-item.x)/distance;item.dy=(destination.y-item.y)/distance;const travel=Math.min(distance-stop,speed*dt);item.x=Math.max(90,Math.min(870,item.x+item.dx*travel));item.y=Math.max(175,Math.min(575,item.y+item.dy*travel));}
+      if(prey&&dist(item,prey)<=24&&item.timer<=0){if(prey.hp<=1)kill(s,prey);else prey.hp--;item.timer=1.2;}
+    }
+  }
   function step(s, dt, input = {}, random = Math.random) {
     if (s.over) return;
     dt = Math.max(0, Math.min(dt, .05));
@@ -163,27 +195,26 @@
     if (length > .08) { s.player.dx = mx / Math.hypot(mx, my); s.player.dy = my / Math.hypot(mx, my); }
     s.player.x = Math.max(90, Math.min(870, s.player.x + mx * 165 * dt));
     s.player.y = Math.max(185, Math.min(555, s.player.y + my * 165 * dt));
-    if (s.phase === 'day') { s.dayTime += dt; if (s.dayTime >= 180) beginNight(s); return; }
+    if (s.phase === 'day') { s.dayTime += dt;updateDucks(s,dt); if (s.dayTime >= 180) beginNight(s); return; }
     s.nightTime += dt; s.spawnClock = Math.max(0, s.spawnClock - dt);
     if (s.spawned < s.waveTotal && s.spawnClock <= 0) { spawn(s, random); s.spawnClock = Math.max(1.25, 4 - s.nights * .14 - s.level * .25); }
-    for (const item of s.structures) if (item.type === 'duck' && item.fed) {
-      item.timer -= dt;
-      const prey = s.snails.find(n => n.hp > 0 && dist(n, item) < 110);
-      if (prey && item.timer <= 0) { if (prey.hp <= 1) kill(s, prey); else prey.hp--; item.timer = 1.2; }
-    }
+    for(const item of s.structures)if(item.type==='thorn')item.timer=Math.max(0,(item.timer||0)-dt);
+    updateDucks(s,dt);
     for (const snail of s.snails) {
       if (snail.hp <= 0) continue;
       let plants = living(s); if (!plants.length) break;
       let target = plants.sort((a, b) => dist(a, snail) - dist(b, snail))[0];
-      const lure = s.structures.find(t => t.type === 'beer' && t.charges > 0 && dist(t, snail) < 120);
+      const lure = s.structures.find(t => ['beer','lantern'].includes(t.type) && t.charges > 0 && dist(t, snail) < (t.type==='lantern'?170:120));
       if (lure) target = lure;
       let blocked = false, multiplier = 1;
       for (const item of s.structures) {
         if (item.hp <= 0) continue;
         const distance = dist(item, snail);
-        if (item.type === 'copper' && distance < 65) multiplier = .35;
+        if (item.type === 'copper' && distance < 65) multiplier = Math.min(multiplier,.35);
+        if(item.type==='resin'&&distance<75)multiplier=Math.min(multiplier,.2);
         if (distance > 30) continue;
-        if (['pit', 'beer', 'electric'].includes(item.type) && item.charges > 0) { item.charges--; kill(s, snail); if (!item.charges) item.hp = 0; break; }
+        if (['pit', 'beer', 'electric','lantern'].includes(item.type) && item.charges > 0) { item.charges--; kill(s, snail); if (!item.charges) item.hp = 0; break; }
+        if(item.type==='thorn'&&item.charges>0&&item.timer<=0){item.charges--;item.timer=1.1;if(snail.hp<=1)kill(s,snail);else snail.hp--;if(!item.charges)item.hp=0;}
         if (item.type === 'fence') { blocked = true; item.hp = Math.max(0, item.hp - dt * (5 + snail.bite * 3)); }
       }
       if (snail.hp <= 0 || blocked) continue;
@@ -217,11 +248,13 @@
       const result = campaign(); result.unlocked = c.unlocked; result.best = c.best;
       for (let level = 0; level <= c.unlocked; level++) for (const difficulty of Object.keys(DIFFICULTIES)) {
         const s = c.runs[`${level}:${difficulty}`]; if (!s) continue;
-        if (![1,2].includes(s.version) || s.level !== level || s.difficulty !== difficulty || !['gardener','gardeneress','fox'].includes(s.character) || !['day','night'].includes(s.phase)) continue;
+        if (![1,2,3,4].includes(s.version) || s.level !== level || s.difficulty !== difficulty || !['gardener','gardeneress','fox'].includes(s.character) || !['day','night'].includes(s.phase)) continue;
         const finite = (obj, names) => names.every(k => typeof obj[k] === 'number' && Number.isFinite(obj[k]) && obj[k] >= 0 && obj[k] < 1e7);
         if (!finite(s, ['money','nights','eaten','dryLost','kills','damage','haste','cooldown','dayTime','nightTime','spawned','waveTotal','spawnClock','nextId','attackFlash','lastAction','lastIncome']) || s.damage < 1 || s.damage > 4 || s.haste > 4 || !Number.isInteger(s.nights) || s.waveTotal > 1000 || !s.player || !finite(s.player,['x','y']) || !Number.isFinite(s.player.dx) || !Number.isFinite(s.player.dy)) continue;
         if (!Array.isArray(s.plots) || s.plots.length !== (s.version===1?12:PLOT_COUNT) || !s.plots.every(p=>finite(p,['x','y','hp','dry']) && (p.type===null || PLANTS[p.type]) && typeof p.unlocked==='boolean' && typeof p.watered==='boolean')) continue;
-        if (!s.inventory || !Object.keys({...PLANTS,...ITEMS}).every(k=>Number.isInteger(s.inventory[k]) && s.inventory[k]>=0 && s.inventory[k]<100000)) continue;
+        if(s.version<4&&s.inventory){for(const id of ['hoe','rake','mallet','sickle','thorn','resin','lantern'])if(s.inventory[id]===undefined)s.inventory[id]=id==='hoe'?1:0;}
+        s.weapon=s.weapon||'hoe';if(!WEAPONS[s.weapon]||!s.inventory?.[s.weapon])continue;
+        if (!s.inventory || !Object.keys({...PLANTS,...ITEMS,...WEAPONS}).every(k=>Number.isInteger(s.inventory[k]) && s.inventory[k]>=0 && s.inventory[k]<100000)) continue;
         if (!Array.isArray(s.structures) || s.structures.length>200 || !s.structures.every(t=>ITEMS[t.type] && t.type!=='food' && finite(t,['x','y','hp','charges','age','id']) && Number.isFinite(t.timer))) continue;
         if (!Array.isArray(s.snails) || s.snails.length>1000 || !s.snails.every(n=>['normal','fast','armored','giant'].includes(n.type) && finite(n,['x','y','hp','maxHp','speed','reward','bite','id']) && Number.isFinite(n.timer) && Number.isFinite(n.dx) && Number.isFinite(n.dy))) continue;
         if(s.version===1){
@@ -230,6 +263,8 @@
           s.plots=Array.from({length:PLOT_COUNT},(_,i)=>({...plotPosition(i),unlocked:false,type:null,hp:0,watered:false,dry:0,...(old[i]||{}),...plotPosition(i)}));
           s.version=2;
         }
+        if(s.version<3){let open=s.plots.filter(p=>p.unlocked).length;for(const p of s.plots)if(open<9&&!p.unlocked&&!s.structures.some(t=>dist(t,p)<34)){p.unlocked=true;open++;}s.version=3;}
+        s.version=4;
         s.coinEvents=[]; // Effects are transient and never replay after restoring.
         s.over = Boolean(s.over); s.reason = typeof s.reason === 'string' ? s.reason.slice(0,250) : ''; s.notice = typeof s.notice === 'string' ? s.notice.slice(0,250) : '';
         result.runs[`${level}:${difficulty}`] = s;
@@ -237,7 +272,7 @@
       return result;
     } catch { return null; }
   }
-  const model = { PLOT_COUNT, expansionPrice, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, place, repair, attack, spawn, step, campaign, record, parseSave };
+  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, plant, place, repair, attack, spawn, step, campaign, record, parseSave };
   root.SnailModel = model;
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
 })(globalThis);

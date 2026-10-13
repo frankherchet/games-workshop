@@ -37,7 +37,7 @@ Automatische Speicherung spätestens alle zwei aktiven Sekunden, nach Käufen, G
 
 Gegossene Pflanzen bringen beim Sonnenaufgang Einkommen. Gießen heilt Schäden; beim Einpflanzen werden Pflanzen gleich gegossen. Nach einer trockenen Nacht gibt es keinen Ertrag, nach der zweiten aufeinanderfolgenden trockenen Nacht verwelkt die Pflanze. Gehen alle Pflanzen verloren, endet die Partie.
 
-Der Garten lässt sich sechsmal um je drei Pflanzplätze auf insgesamt 24 Plätze erweitern, für Grundpreise 55, 70, 85, 100, 115 und 130. Die neuen Plätze bleiben zunächst leer und brauchen Samen. Alle Preise werden an den Schwierigkeitsgrad angepasst.
+Der Garten lässt sich fünfmal um je drei Pflanzplätze auf insgesamt 24 Plätze erweitern, für Grundpreise 55, 70, 85, 100 und 115. Die neuen Plätze bleiben zunächst leer und brauchen Samen. Alle Preise werden an den Schwierigkeitsgrad angepasst.
 
 ## Shop und Verteidigung
 
@@ -67,7 +67,7 @@ Automatische Tests prüfen unter anderem Gießen, Verwelken, Wirtschaft, Erweite
 
 ## Kompakte Beete, Shop und Erträge
 
-24 Plätze in sechs Spalten und vier Reihen, Abstand 52 statt 80 Spielpixel. Sechs Pflanzen zu Beginn; Erweiterungen öffnen jeweils drei Plätze (55 Münzen, danach pro Erweiterung 15 Münzen mehr, vor Schwierigkeitsfaktor). Pflanzen stehen in kleinen, unregelmäßigen Erdvertiefungen mit Grashalmen an den Rändern. Alte Spielstände mit 12 Plätzen werden automatisch übernommen: Pflanzen, HP, Gießzustand, Geld, Nächte und Freischaltungen bleiben erhalten; die Beetpositionen wechseln in das kompakte Raster.
+24 Plätze in sechs Spalten und vier Reihen, Abstand 52 statt 80 Spielpixel. Sechs Pflanzen und drei leere, offene Beete zu Beginn; Erweiterungen öffnen jeweils drei Plätze (55 Münzen, danach pro Erweiterung 15 Münzen mehr, vor Schwierigkeitsfaktor). Pflanzen stehen in kleinen, unregelmäßigen Erdvertiefungen mit Grashalmen an den Rändern. Alte Spielstände mit 12 Plätzen werden automatisch übernommen: Pflanzen, HP, Gießzustand, Geld, Nächte und Freischaltungen bleiben erhalten; die Beetpositionen wechseln in das kompakte Raster.
 
 Die Shop-Leiste bietet Waffen (Hackenschaden und Cooldown), Pflanzen (Samen und Gartenfläche) und Fallen/Verteidigung (Fallen, Zäune, Kupferband, Enten und Futter). Die aktive Kategorie bleibt beim Kauf erhalten.
 
@@ -86,3 +86,21 @@ Am Tag zeigt eine Pflanze im Umkreis von 96 Spielpixeln eine antippbare Gießkan
 Der goldene Vollbildknopf liegt oben rechts über der Karte. Beim Spielstart scrollt die Seite an den Anfang der Spielfläche. Im Vollbild füllt die Karte den gesamten verfügbaren Browserbereich, HUD und Steuerung liegen darüber. Eine Kamera folgt der Figur und begrenzt den Ausschnitt an den Gartenrändern; dadurch bleibt die Grafik auch auf Hochkantbildschirmen unverzerrt. Touchpositionen und Hinweisknöpfe verwenden dieselbe Kameratransformation. Native Fullscreen-API wird weiterhin verwendet, wo verfügbar; ansonsten füllt das Spiel das Browserfenster. Browser-eigene Safari-Bedienelemente lassen sich aus diesem Fallback nicht entfernen.
 
 59 automatische Tests bestehen lokal, darunter Kameraabdeckung, Touchkoordinaten nach Drehen, Hinweisauswahl und Shopradius. Die neue Oberfläche ist zur Freigabe vorbereitet; ein echter iPad-Test dieser Anpassungen steht aus.
+
+## Pflanzen und Verteidigungen V0.6
+
+Drei leere Startbeete stehen ohne Erweiterung zur Verfügung; vorhandene Spielstände erhalten diese Plätze kostenlos, soweit sie nicht von einer Verteidigung belegt sind. Geld, Pflanzen, Inventar und Gegner bleiben erhalten. Beim Pflanzen wird ausschließlich ein freies, offenes Beet bepflanzt. Belegte, gesperrte und entfernte Plätze erklären den jeweiligen Grund. Im Pflanzenmodus erscheint ein direkter Pflanzknopf über dem nächsten erreichbaren freien Beet.
+
+Hinweisknöpfe werden mit ihren gemessenen Abmessungen und den belegten Flächen von Vollbildknopf, HUD, Hinweistext und Steuerung platziert. Der Shop-Hinweis weicht dem Vollbildknopf aus.
+
+Das neue transparente Sprite-Blatt `src/assets/garden-defenses-v6.png` ist mit integrierter Bildgenerierung erstellt. Prompt: mittelalterliche feine Pixelkunst passend zum Garten, sechs Objekte (Erdgrube, Bierfass, Holzzaun, Elektrozaun mit magischen Kristallen, Kupferband, Laufente), je intakte und verbrauchte Variante beziehungsweise zwei Enten-Laufphasen. Die Bilder werden im Garten und als Shop-Vorschau verwendet. Verschleiß, Ladungen, Reparaturen und Futterverbrauch behalten ihre Spielregeln.
+
+## Neue Waffen und Fallen V0.7
+
+Im Waffen-Shop lassen sich Gartenrechen (48 Münzen, zwei Ziele, Reichweite 92, Cooldown-Faktor 1,4), Eichenkeule (72 Münzen, +2 Schaden, Reichweite 66, Faktor 1,6) und Dornen-Sichel (90 Münzen, ein Ziel, Reichweite 72, Faktor 0,75) erwerben und anlegen. Bereits gekaufte Waffen können kostenlos erneut ausgerüstet werden; die Hacke bleibt immer verfügbar. Schlagkraft und Geschicklichkeit verbessern alle Waffen. Käufe und Ausrüstungswechsel sind nur am Tag möglich.
+
+Dornenfalle (24 Münzen): sechs einzelne Verletzungen, eigener Cooldown, vier Nächte. Harztopf (26 Münzen): reduziert Bewegung im Umkreis auf 20 Prozent, drei Nächte. Köderlaterne (32 Münzen): lockt Schnecken aus bis zu 170 Pixeln Entfernung an und fängt drei, drei Nächte. Keine mehrfachen Prämien für dieselbe Schnecke.
+
+`src/assets/garden-extras-v7.png` enthält die sechs neuen Objekte. Bildgenerierungs-Prompt: detaillierte mittelalterliche Pixelkunst passend zum vorhandenen Garten, Rechen, Eichenkeule, Sichel, Dornenfalle, Harztopf, Köderlaterne auf transparentem Hintergrund. Ein anschließender Cutout-Auftrag bewahrt die Objekte und entfernt den Hintergrund. Waffen werden in der Hand und beim Angriff gezeichnet, Fallen im Garten sowie alle neuen Gegenstände als Shop-Vorschauen. Alte Speicherstände erhalten neue Inventarfelder und behalten Geld, Pflanzen, Waffenbesitz und Verteidigungen.
+
+Die Laufente verfolgt nachts gefüttert die nächste lebende Schnecke mit 90 Pixeln pro Sekunde und pickt erst aus höchstens 24 Pixeln Entfernung. Ohne Ziel kehrt sie zu ihrem Aufstellort zurück. Am Tag spaziert sie in dessen Umgebung; ohne Futter verfolgt und verletzt sie nachts keine Gegner. Laufrichtung und zwei Laufbilder folgen der tatsächlichen Bewegung. Aufstellort und Jagd-Cooldown werden mitgespeichert.

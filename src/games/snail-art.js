@@ -114,7 +114,7 @@
       rect(c,gx,gy,1+(i%7===0?1:0),1,[p.watered?'#513d2d':'#795539','#b3976188','#4b392e99','#d6b68155'][i%4]);
     }
     for(let i=0;i<18;i++){const angle=i*Math.PI*2/18,gx=x+Math.cos(angle)*26,gy=y+9+Math.sin(angle)*17;rect(c,gx,gy-2-(i%3),1,3+i%3,i%2?'#54733f':'#8ba059');}
-    if(!p.type){rect(c,x-8,y-2,16,2,'#d4b384');rect(c,x-1,y-8,2,15,'#d4b384');c.restore();return;}
+    if(!p.type){oval(c,x,y+9,12,7,'#483b2c',1);rect(c,x-5,y+5,3,3,'#d5bc80');rect(c,x+2,y+7,3,2,'#bd9b63');rect(c,x-1,y-7,2,10,'#b8d295');rect(c,x-5,y-3,10,2,'#b8d295');c.restore();return;}
     const plant=M.PLANTS[p.type],dry=p.dry>0,weak=p.hp<plant.hp*.5,bend=Math.round(Math.sin(time*1.2+x*.01)*(dry?1:2)),fy=y-20+(dry?6:0),fx=x+bend;
     rect(c,x-2,y-17,4,33,dry?'#85744c':'#3a7042');rect(c,x,y-17,1,30,dry?'#b3a16c':'#7aa962');
     oval(c,x-10,y+2,9,4,dry?'#948249':'#538a45',2);oval(c,x+9,y-6,8,4,dry?'#a49056':'#6c9d4a',2);rect(c,x-13,y+1,10,1,'#9cbc6d');
@@ -194,6 +194,12 @@
     if(n.maxHp>1){rect(c,n.x-15,n.y-r-10,30,3,'#342d3c');rect(c,n.x-15,n.y-r-10,30*n.hp/n.maxHp,3,'#d992a0');}
   }
   function structure(c,t,time){
+    if(root.SnailDefenses?.draw(c,t,time)){
+      if(t.type==='fence'){rect(c,t.x-20,t.y+20,40,3,'#32523a');rect(c,t.x-20,t.y+20,40*t.hp/M.ITEMS.fence.hp,3,'#cbae75');}
+      if(t.charges){c.fillStyle='#fff0c5';c.font='bold 10px Georgia';c.textAlign='center';c.fillText(t.charges,t.x,t.y+29);}
+      if(t.type==='electric'&&t.charges>0&&Math.sin(time*5+t.id)>.7)sparkle(c,t.x+10,t.y-19,2,'#c5f5f0');
+      return;
+    }
     const x=t.x,y=t.y;oval(c,x+4,y+13,24,6,'#25442d32');
     if(t.type==='duck'){const bob=t.fed?Math.round(Math.sin(time*5+t.id)):0;oval(c,x,y+3,13,8,t.fed?'#e8dcb8':'#a8a58c',2);oval(c,x-4,y+1,8,5,'#fff0cf',2);rect(c,x+6,y-16+bob,9,18,t.fed?'#f2e7c8':'#c4bca2');rect(c,x+14,y-11+bob,8,4,'#e9b763');rect(c,x+12,y-15+bob,2,2,'#2c4436');rect(c,x-5,y+10,4,3,'#d9a153');rect(c,x+6,y+10,4,3,'#d9a153');return;}
     if(t.type==='pit'){oval(c,x,y,23,18,'#8e6b48',3);oval(c,x,y+2,18,13,'#372e2b',3);oval(c,x+2,y+5,12,7,'#202e29',2);rect(c,x-20,y-12,13,3,'#b59b64');rect(c,x+9,y-10,9,3,'#64824b');}
@@ -243,8 +249,9 @@
     atmosphere(c,s,time);
     for(const n of s.snails)snail(c,n,time,night);
     character(c,s.character,s.player.x,s.player.y,time,Math.hypot(input.x||0,input.y||0)>.1,s.player,{water:s.lastAction>0});
+    if(s.weapon&&s.weapon!=='hoe'&&!s.attackFlash&&!s.lastAction)root.SnailExtras?.draw(c,s.weapon,s.player.x+s.player.dx*20,s.player.y-9+s.player.dy*6,30);
     rect(c,s.player.x+s.player.dx*30-2,s.player.y+s.player.dy*30-2,4,4,night?'#fff0b4':'#e9d595');
-    if(s.attackFlash>0){const direction=Math.atan2(s.player.dy,s.player.dx),progress=1-s.attackFlash/.22,angle=direction-.7+progress*1.4;c.strokeStyle='#f4df9b9e';c.lineWidth=3;c.beginPath();c.arc(s.player.x,s.player.y,58,direction-.6,direction+.6);c.stroke();const hx=s.player.x+Math.cos(angle)*43,hy=s.player.y+Math.sin(angle)*43;c.strokeStyle='#b1905d';c.lineWidth=4;c.beginPath();c.moveTo(s.player.x,s.player.y-14);c.lineTo(hx,hy);c.stroke();rect(c,hx-6,hy-4,13,7,'#b9c5c4');rect(c,hx-6,hy-4,13,2,'#e6eae0');}
+    if(s.attackFlash>0){const direction=Math.atan2(s.player.dy,s.player.dx),progress=1-s.attackFlash/.22,angle=direction-.7+progress*1.4;c.strokeStyle='#f4df9b9e';c.lineWidth=3;c.beginPath();c.arc(s.player.x,s.player.y,58,direction-.6,direction+.6);c.stroke();const hx=s.player.x+Math.cos(angle)*43,hy=s.player.y+Math.sin(angle)*43;c.strokeStyle='#b1905d';c.lineWidth=4;c.beginPath();c.moveTo(s.player.x,s.player.y-14);c.lineTo(hx,hy);c.stroke();if(!s.weapon||s.weapon==='hoe'){rect(c,hx-6,hy-4,13,7,'#b9c5c4');rect(c,hx-6,hy-4,13,2,'#e6eae0');}else root.SnailExtras?.draw(c,s.weapon,hx,hy,38);}
     if(s.lastAction>0){const progress=1-s.lastAction/.35;for(let i=0;i<7;i++){const x=s.player.x+s.player.dx*(27+i*4),y=s.player.y-15+s.player.dy*(27+i*4)+progress*12;rect(c,x,y,2,4,i%2?'#83c5dd':'#c9e8ed');}}
     // Income floats above its source: amount first, followed by a spinning coin.
     for(const effect of effects){
@@ -258,5 +265,5 @@
     }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,character,sprite,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
+  root.SnailArt={garden,character,sprite,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
 })(globalThis);

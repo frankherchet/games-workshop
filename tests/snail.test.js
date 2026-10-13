@@ -4,8 +4,8 @@ const M=require('../src/games/snail-model.js');
 function endNight(s){assert.equal(M.beginNight(s),true);s.spawned=s.waveTotal;s.snails=[];assert.equal(M.finishNight(s),true);}
 function enemy(s,changes={}){M.spawn(s,()=>.4);Object.assign(s.snails.at(-1),changes);return s.snails.at(-1);}
 
-test('A new garden has six living flowers, eighteen locked plots and starting seeds',()=>{
-  const s=M.newRun();assert.equal(M.living(s).length,6);assert.equal(s.plots.filter(p=>p.unlocked).length,6);assert.equal(s.inventory.daisy,3);
+test('A new garden has six living flowers, three empty starting plots and fifteen locked plots and starting seeds',()=>{
+  const s=M.newRun();assert.equal(M.living(s).length,6);assert.equal(s.plots.filter(p=>p.unlocked).length,9);assert.equal(s.inventory.daisy,3);
   assert.equal(s.phase,'day');assert.equal(s.money,70);assert.equal(s.plots.length,24);
 });
 test('Watered flowers yield income and dry flowers do not',()=>{
@@ -32,8 +32,8 @@ test('Shop prices are discounted on easy; insufficient money never creates an it
   normal.money=0;assert.equal(M.buy(normal,'electric'),false);assert.equal(normal.inventory.electric,0);
 });
 test('Expansion unlocks exactly three plots and does not create free plants',()=>{
-  const s=M.newRun();s.money=500;assert.equal(M.buy(s,'expand'),true);assert.equal(s.plots.filter(p=>p.unlocked).length,9);
-  assert.equal(M.living(s).length,6);M.buy(s,'expand');assert.equal(s.plots.filter(p=>p.unlocked).length,12);s.money=10000;for(let i=0;i<4;i++)assert.equal(M.buy(s,'expand'),true);assert.equal(s.plots.filter(p=>p.unlocked).length,24);assert.equal(M.buy(s,'expand'),false);
+  const s=M.newRun();s.money=500;assert.equal(M.buy(s,'expand'),true);assert.equal(s.plots.filter(p=>p.unlocked).length,12);
+  assert.equal(M.living(s).length,6);M.buy(s,'expand');assert.equal(s.plots.filter(p=>p.unlocked).length,15);s.money=10000;for(let i=0;i<3;i++)assert.equal(M.buy(s,'expand'),true);assert.equal(s.plots.filter(p=>p.unlocked).length,24);assert.equal(M.buy(s,'expand'),false);
 });
 test('Rare seeds require a garden unlock and upgrades have explicit caps',()=>{
   const s=M.newRun();s.money=5000;assert.equal(M.buy(s,'moon',0),false);assert.equal(M.buy(s,'moon',1),true);
@@ -108,10 +108,51 @@ test('Corrupt storage and invalid run settings are rejected safely',()=>{
 
 test('Old twelve-plot saves migrate to 24 slots without losing progress or replaying rewards',()=>{
  const c=M.campaign(),s=M.newRun();s.version=1;s.plots=s.plots.slice(0,12);s.plots[1].type='tulip';s.plots[1].watered=true;s.plots[1].hp=4;s.money=123;s.nights=3;M.record(c,s);
- const restored=M.parseSave(JSON.stringify(c)).runs['0:medium'];assert.equal(restored.version,2);assert.equal(restored.plots.length,24);assert.equal(restored.money,123);assert.equal(restored.nights,3);assert.equal(restored.plots[1].type,'tulip');assert.equal(restored.plots[1].watered,true);assert.equal(restored.plots[1].hp,4);assert.equal(restored.plots.filter(p=>p.unlocked).length,6);assert.deepEqual(restored.coinEvents,[]);
+ const restored=M.parseSave(JSON.stringify(c)).runs['0:medium'];assert.equal(restored.version,4);assert.equal(restored.plots.length,24);assert.equal(restored.money,123);assert.equal(restored.nights,3);assert.equal(restored.plots[1].type,'tulip');assert.equal(restored.plots[1].watered,true);assert.equal(restored.plots[1].hp,4);assert.equal(restored.plots.filter(p=>p.unlocked).length,9);assert.deepEqual(restored.coinEvents,[]);
 });
 test('Kill and plant income emit accurate single rewards, never expenses or restore duplicates',()=>{
  const s=M.newRun();M.beginNight(s);s.player={x:465,y:450,dx:1,dy:0};enemy(s,{x:480,y:450});M.attack(s);assert.equal(s.coinEvents.length,1);assert.equal(s.coinEvents[0].amount,2);M.attack(s);assert.equal(s.coinEvents.length,1);
  s.snails=[];s.spawned=s.waveTotal;s.plots[0].watered=true;const money=s.money;M.finishNight(s);assert.equal(s.money,money+2);assert.equal(s.coinEvents.length,2);assert.equal(s.coinEvents[1].x,s.plots[0].x);
  const c=M.record(M.campaign(),s);assert.deepEqual(M.parseSave(JSON.stringify(c)).runs['0:medium'].coinEvents,[]);
+});
+
+test('New and existing gardens have three empty plantable starter beds without spending money',()=>{
+ const s=M.newRun();assert.equal(s.plots.filter(p=>p.unlocked&&!p.type).length,3);assert.equal(M.expansionPrice(s),55);
+ s.version=2;s.plots.slice(6,9).forEach(p=>p.unlocked=false);s.money=6;const c=M.record(M.campaign(),s),restored=M.parseSave(JSON.stringify(c)).runs['0:medium'];assert.equal(restored.money,6);assert.equal(restored.plots.filter(p=>p.unlocked&&!p.type).length,3);assert.equal(restored.version,4);
+});
+test('Planting uses an empty bed, consumes exactly one seed and never waters or replaces a full bed',()=>{
+ const s=M.newRun(),empty=s.plots[6];s.player={x:empty.x,y:empty.y+30,dx:0,dy:-1};s.inventory.tulip=3;assert.equal(M.plant(s,empty,'tulip'),true);assert.equal(empty.type,'tulip');assert.equal(s.inventory.tulip,2);empty.watered=false;assert.equal(M.plant(s,empty,'tulip'),false);assert.equal(s.inventory.tulip,2);assert.equal(empty.watered,false);assert.match(s.notice,/bereits bepflanzt/);
+});
+test('Locked and distant beds cannot take seeds and show an actionable explanation',()=>{
+ const s=M.newRun(),locked=s.plots[9];s.player={x:locked.x,y:locked.y,dx:0,dy:1};assert.equal(M.plant(s,locked),false);assert.match(s.notice,/gesperrt/);assert.equal(s.inventory.daisy,3);s.player={x:90,y:555};assert.equal(M.plant(s,s.plots[6]),false);assert.match(s.notice,/leeres Erdbeet/);
+});
+
+test('Migrating free beds preserves defenses and avoids opening a bed under an existing trap',()=>{
+ const s=M.newRun();s.version=2;s.plots.slice(6,9).forEach(p=>p.unlocked=false);s.structures=[{type:'pit',x:s.plots[6].x,y:s.plots[6].y,hp:1,charges:3,age:0,id:1,timer:0}];const restored=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.equal(restored.plots[6].unlocked,false);assert.equal(restored.plots.filter(p=>p.unlocked).length,9);assert.equal(restored.structures[0].charges,3);
+});
+test('Weapons are purchased once, equipped immediately and can be switched without paying again',()=>{
+ const s=M.newRun();s.money=500;assert.equal(M.buy(s,'rake'),true);assert.equal(s.weapon,'rake');assert.equal(s.money,452);assert.equal(s.inventory.rake,1);M.buy(s,'hoe');assert.equal(s.weapon,'hoe');M.buy(s,'rake');assert.equal(s.money,452);assert.equal(s.weapon,'rake');M.beginNight(s);assert.equal(M.buy(s,'mallet'),false);assert.equal(s.weapon,'rake');
+});
+test('Rake hits two forward targets, mallet adds damage and sickle reduces cooldown',()=>{
+ const s=M.newRun();s.player={x:465,y:450,dx:1,dy:0};s.weapon='rake';M.beginNight(s);const a=enemy(s,{x:485,y:450}),b=enemy(s,{x:510,y:450}),behind=enemy(s,{x:435,y:450});M.attack(s);assert.equal(a.hp,0);assert.equal(b.hp,0);assert.equal(behind.hp,1);assert.equal(s.money,74);
+ const heavy=M.newRun();heavy.player={x:465,y:450,dx:1,dy:0};heavy.weapon='mallet';M.beginNight(heavy);const n=enemy(heavy,{x:485,y:450,hp:3});M.attack(heavy);assert.equal(n.hp,0);assert.ok(M.cooldown(heavy)>M.cooldown(M.newRun()));const fast=M.newRun();fast.weapon='sickle';assert.ok(M.cooldown(fast)<M.cooldown(M.newRun()));
+});
+test('Thorns consume one charge per cooldown hit and pay rewards only on a kill',()=>{
+ const s=M.newRun();M.beginNight(s);const n=enemy(s,{x:650,y:380,hp:3}),t={type:'thorn',x:650,y:380,hp:1,charges:6,timer:0,age:0,id:80};s.structures=[t];M.step(s,.01);assert.equal(n.hp,2);assert.equal(t.charges,5);assert.equal(s.money,70);M.step(s,.01);assert.equal(n.hp,2);assert.equal(t.charges,5);t.timer=0;n.hp=1;M.step(s,.01);assert.equal(s.money,72);assert.equal(t.charges,4);M.step(s,.01);assert.equal(s.money,72);
+});
+test('Resin slows enemies strongly and a bait lantern attracts them away from the flowers',()=>{
+ const plain=M.newRun();M.beginNight(plain);const n=enemy(plain,{x:650,y:380});const slow=JSON.parse(JSON.stringify(plain));slow.structures=[{type:'resin',x:650,y:380,hp:1,charges:0,timer:0,age:0,id:80}];M.step(plain,.01);M.step(slow,.01);assert.ok(M.dist(n,{x:650,y:380})>M.dist(slow.snails[0],{x:650,y:380})*4.9);
+ const lure=M.newRun();M.beginNight(lure);const attracted=enemy(lure,{x:650,y:380});lure.structures=[{type:'lantern',x:730,y:380,hp:1,charges:3,timer:0,age:0,id:80}];M.step(lure,.01);assert.ok(attracted.x>650);
+});
+test('Version-three saves gain the new inventory fields without losing currency or existing traps',()=>{
+ const s=M.newRun();s.version=3;delete s.weapon;for(const id of ['hoe','rake','mallet','sickle','thorn','resin','lantern'])delete s.inventory[id];s.money=6;s.inventory.beer=2;const restored=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.equal(restored.version,4);assert.equal(restored.weapon,'hoe');assert.equal(restored.inventory.hoe,1);assert.equal(restored.inventory.thorn,0);assert.equal(restored.money,6);assert.equal(restored.inventory.beer,2);
+ const equipped=M.newRun();M.buy(equipped,'rake');assert.equal(M.parseSave(JSON.stringify(M.record(M.campaign(),equipped))).runs['0:medium'].weapon,'rake');
+});
+
+test('A fed duck visibly pursues a distant snail, attacks only at close range and returns toward home',()=>{
+ const s=M.newRun();s.structures=[{type:'duck',id:90,x:650,y:450,hp:1,charges:0,age:0,timer:0,fed:false}];M.beginNight(s);const prey=enemy(s,{x:450,y:450});s.spawned=s.waveTotal;M.step(s,.05);const duck=s.structures[0];assert.ok(duck.x<650);assert.equal(prey.hp,1);assert.equal(s.kills,0);
+ for(let i=0;i<160&&s.kills===0;i++)M.step(s,.05);assert.equal(s.kills,1);assert.equal(s.money,72);assert.equal(duck.homeX,650);assert.equal(duck.homeY,450);const c=M.record(M.campaign(),s),restored=M.parseSave(JSON.stringify(c)).runs['0:medium'];assert.equal(restored.structures[0].homeX,650);
+});
+test('Ducks stroll during daytime; an unfed duck does not chase or damage a snail',()=>{
+ const s=M.newRun();s.structures=[{type:'duck',id:1,x:650,y:450,hp:1,charges:0,age:0,timer:0,fed:false}];M.step(s,.05);assert.ok(M.dist(s.structures[0],{x:650,y:450})>0);s.inventory.food=0;M.beginNight(s);const prey=enemy(s,{x:400,y:450}),d=s.structures[0];const before=M.dist(d,prey);M.step(s,.05);assert.equal(s.kills,0);assert.equal(prey.hp,1);assert.ok(d.x>640);assert.ok(M.dist(d,prey)>before-3);
 });
