@@ -361,3 +361,67 @@ test('mounted rider does not alter the solo NPC world or rescue quest', () => {
   assert.equal(logic.dismount(state),false);
   assert.equal(state.quest,'meet');
 });
+
+
+test('human can take the reins nearby; companion tracks the hand and waits after release', () => {
+  const s=logic.newState('duo','haflinger');
+  assert.equal(logic.toggleLead(s),'leading');
+  assert.equal(s.leading,true);
+  assert.equal(s.following,false);
+  assert.equal(s.active,'player');
+  assert.equal(s.player.form,'human');
+  const target=logic.leadTarget(s);
+  const before=Math.hypot(s.companion.x-target.x,s.companion.z-target.z);
+  logic.advanceLead(s,.15);
+  const after=Math.hypot(s.companion.x-target.x,s.companion.z-target.z);
+  assert.ok(after < before, 'horse follows the leading hand');
+  s.player.x=8;s.player.z=10;s.player.heading=.3;
+  for(let t=0;t<60;t++)logic.advanceLead(s,.04);
+  const next=logic.leadTarget(s);
+  assert.ok(Math.hypot(s.companion.x-next.x,s.companion.z-next.z)<.15);
+  assert.equal(logic.toggleLead(s),'released');
+  assert.equal(s.leading,false);
+  assert.equal(s.following,false);
+  const unchanged=s.companion.x;
+  logic.advanceLead(s,.5);
+  assert.equal(s.companion.x,unchanged);
+});
+
+test('reins cannot be taken from a distance, when riding, or in horse-only mode', () => {
+  const s=logic.newState('duo','shetland');
+  s.companion.x=22;s.companion.z=23;
+  assert.equal(logic.toggleLead(s),'tooFar');
+  assert.equal(s.leading,false);
+  s.companion.x=s.player.x;s.companion.z=s.player.z;
+  assert.equal(logic.mountOrDismount(s),'mounted');
+  assert.equal(logic.toggleLead(s),'mounted');
+  assert.equal(logic.switchTarget(s),true); // dismount
+  s.player.x=s.companion.x;s.player.z=s.companion.z;
+  assert.equal(logic.toggleLead(s),'leading');
+  assert.equal(logic.transform(s),false);
+  assert.equal(s.player.form,'human');
+  assert.equal(logic.mountOrDismount(s),'mounted'); // hand releases rein
+  assert.equal(s.leading,false);
+  assert.equal(logic.toggleLead(logic.newState('horseOnly')),'horseOnly');
+});
+
+test('changing control between human and companion releases held reins', () => {
+  const s=logic.newState('duo');
+  assert.equal(logic.toggleLead(s),'leading');
+  assert.equal(logic.switchTarget(s),true);
+  assert.equal(s.active,'companion');
+  assert.equal(s.leading,false);
+  assert.equal(logic.toggleLead(s),'needHuman');
+});
+
+test('helmet, Western hat, and cap outfits are selectable and sanitized', () => {
+  assert.equal(logic.outfits.length,3);
+  assert.equal(logic.newState('duo','haflinger').player.outfitId,'helmet');
+  assert.equal(logic.newState('duo','haflinger','cowboy').player.outfitId,'cowboy');
+  assert.equal(logic.newState('duo','haflinger','cap').player.outfitId,'cap');
+  assert.equal(logic.newState('duo','haflinger','__proto__').player.outfitId,'helmet');
+  for (const outfit of logic.outfits) {
+    assert.equal(outfit.pants.length,3);
+    assert.equal(outfit.shirt.length,3);
+  }
+});
