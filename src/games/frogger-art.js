@@ -39,7 +39,7 @@
       c.restore();
       for(const [i,f]of l.flies.entries())if(f.y===y&&!s.collected.includes(i)){const q=p(f.x,y),h=reduced?0:Math.sin(t*2+i)*3;oval(q.x,q.y-17+h,12,12,'#ffe49a33');oval(q.x,q.y-17+h,5,5,'#ffe49a');}
       if(l.friend&&l.friend.y===y&&!s.rescued){const q=p(l.friend.x,y);frog(q.x,q.y,.65,'#ffbf91');text('♥',q.x,q.y-32,'#ffdca1',15);}
-      for(const portal of l.portals||[])if(portal.y===y){const q=p(portal.x,y);oval(q.x,q.y,25,13,'#c5b0ff55');c.strokeStyle='#d2bdff';c.lineWidth=3;c.beginPath();c.ellipse(q.x,q.y,25,13,0,0,Math.PI*2);c.stroke();text(portal.label,q.x,q.y+4,'#faf1ff');}
+      for(const portal of l.portals||[])if(portal.y===y){const pos=M.portalPosition(l,portal,s.time),q=p(pos.x,y);oval(q.x,q.y,25,13,'#c5b0ff55');c.strokeStyle='#d2bdff';c.lineWidth=3;c.beginPath();c.ellipse(q.x,q.y,25,13,0,0,Math.PI*2);c.stroke();text(portal.label,q.x,q.y+4,'#faf1ff');}
       if(s.player.y===y){const q=p(s.player.x,y);if(s.rescued)frog(q.x-27,q.y+10,.55,'#ffbf91');frog(q.x,q.y-(reduced?0:Math.sin(s.hop/M.HOP*Math.PI)*12),1,s.status==='lost'?'#d792b8':'#83f6c4');}
       for(const side of [-1,1]){const q=p(side<0?-1.6:9.6,y);if(l.world===4)box(q.x-14,q.y-18,28,26,'#534575',5,w.color);else if(l.world===3)line([[q.x-15,q.y+6],[q.x,q.y-21],[q.x+15,q.y+6]],'#b9e6f0',4);else{line([[q.x,q.y+7],[q.x-12,q.y-14],[q.x,q.y+7],[q.x+9,q.y-25]],w.color+'77',4);oval(q.x+9,q.y-25,5,7,'#f9a0b5');}}
     }

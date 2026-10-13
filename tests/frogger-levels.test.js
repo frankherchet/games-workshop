@@ -21,6 +21,8 @@ function solve(level){
   return null;
 }
 test('level identifiers, boundaries, pickups and rescue positions are valid',()=>{
+  assert.equal(D.levels.length,50);
+  for(let w=0;w<5;w++)assert.equal(D.levels.filter(l=>l.world===w).length,10);
   assert.equal(new Set(D.levels.map(l=>l.id)).size,D.levels.length);
   for(const l of D.levels){
     assert.equal(l.rows[0].kind,'safe');assert.equal(l.rows.at(-1).kind,'safe');assert.equal(l.flies.length,3);
@@ -28,6 +30,10 @@ test('level identifiers, boundaries, pickups and rescue positions are valid',()=
     for(const f of [...l.flies,...(l.friend?[l.friend]:[])]){
       assert.ok(Number.isInteger(f.x)&&f.x>=0&&f.x<D.WIDTH);assert.ok(f.y>=0&&f.y<l.rows.length);
       assert.equal(l.rows[f.y].kind,'safe','Pickups and rescue have a safe waiting surface');
+    }
+    for(const q of l.portals||[]){
+      assert.equal(l.portals.filter(p=>p.label===q.label).length,2);
+      for(let time=0;time<16;time+=.2){const p=M.portalPosition(l,q,time);assert.ok(p.x>=0&&p.x<D.WIDTH);assert.ok(M.support(l.rows[p.y],p.x,time));}
     }
   }
 });

@@ -2,7 +2,7 @@
   'use strict';
   const D=root.FroggerLevels||(typeof require==='function'?require('./frogger-levels.js'):null);
   const PERIOD=13,STEP=1/120,HOP=.18;
-  const mod=(n,d)=>((n%d)+d)%d;
+  const mod=(n,d)=>{const value=n%d;return value<0?value+d:value;};
   function create(level) {
     return {level,time:0,player:{...level.start},cooldown:0,hop:0,direction:{x:0,y:1},status:'playing',reason:'',collected:[],rescued:false,portalLock:null};
   }
@@ -16,6 +16,7 @@
     return {active:true,warning:false,label:'',remaining:0};
   }
   function distance(row,time) {
+    if(row.oscillate)return row.speed*Math.sin(time*.6);
     if(row.dock)return row.speed*(Math.floor(time/8)*5+Math.max(0,mod(time,8)-3));
     if(row.wind)return row.speed*(time+Math.floor(time/8)*3+Math.min(3,Math.max(0,mod(time,8)-2)));
     return row.speed*time;
@@ -33,6 +34,18 @@
     return objects(row,time).find(o=>!o.danger&&x>=o.x+.05&&x<=o.x+o.w-.05);
   }
   function fail(s,reason) {s.status='lost';s.reason=reason;}
+  function portalPosition(level,portal,time){
+    if(portal.ride===undefined)return {x:portal.x,y:portal.y};
+    const object=objects(level.rows[portal.y],time).find(o=>o.index===portal.ride);
+    return {x:object.x+object.w/2,y:portal.y};
+  }
+  function teleport(s){
+    const portal=(s.level.portals||[]).find(q=>{const p=portalPosition(s.level,q,s.time);return s.player.y===p.y&&Math.abs(s.player.x-p.x)<.48;});
+    if(!portal){s.portalLock=null;return;}
+    if(s.portalLock===portal.label)return;
+    const other=s.level.portals.find(q=>q!==portal&&q.label===portal.label);
+    s.player=portalPosition(s.level,other,s.time);s.portalLock=portal.label;resolve(s);
+  }
   function resolve(s) {
     if(s.status!=='playing')return;
     const p=s.player,row=s.level.rows[p.y];
@@ -51,7 +64,13 @@
     const p=s.player,x=Math.round(p.x)+dx,y=p.y+dy;
     if(x<0||x>=D.WIDTH||y<0||y>=s.level.rows.length)return false;
     p.x=x;p.y=y;s.direction={x:dx,y:dy};s.cooldown=HOP;s.hop=HOP;s.reason='';
-    resolve(s);return true;
+    resolve(s);
+    if(s.status==='playing'&&s.level.rows[p.y].kind==='ice'){
+      const x=p.x+dx,y=p.y+dy;
+      if(x>=0&&x<D.WIDTH&&y>=0&&y<s.level.rows.length){p.x=x;p.y=y;resolve(s);}
+    }
+    if(s.status==='playing')teleport(s);
+    return true;
   }
   function step(s,dt) {
     if(!Number.isFinite(dt)||dt<0||s.status!=='playing')return;
@@ -84,7 +103,7 @@
     const time=Math.max(.001,s.time);progress.times[i]=progress.times[i]===null?time:Math.min(progress.times[i],time);
     progress.unlocked=Math.min(49,Math.max(progress.unlocked,i+1));return stars;
   }
-  const model={create,move,step,phase,objects,support,freshProgress,loadProgress,record,HOP,STEP};
+  const model={create,move,step,phase,objects,support,portalPosition,freshProgress,loadProgress,record,HOP,STEP};
   root.FroggerModel=model;
   if(typeof module!=='undefined'&&module.exports)module.exports=model;
 })(globalThis);

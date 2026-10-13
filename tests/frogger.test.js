@@ -69,3 +69,24 @@ test('ferries stop at the dock and announced currents accelerate continuously',(
   assert.equal(M.phase(wind,1).warning,true);assert.equal(M.phase(wind,2).label,'SCHNELL');
   assert.ok(Math.abs(M.objects(wind,3)[0].x-M.objects(wind,2)[0].x-1)<1e-8);
 });
+test('ice adds one step only, snow stops it, and the boundary stays valid',()=>{
+  const s=M.create(level([{kind:'safe'},{kind:'ice'},{kind:'ice'},{kind:'safe'}]));
+  M.move(s,0,1);assert.deepEqual(s.player,{x:4,y:2});
+  M.step(s,.2);M.move(s,0,1);assert.equal(s.player.y,3);assert.equal(s.status,'won');
+  const edge=M.create(level([{kind:'ice'},{kind:'safe'}]));edge.player.x=7;
+  M.move(edge,1,0);assert.equal(edge.player.x,8);assert.equal(edge.status,'playing');
+});
+test('portal arrival is safe, does not bounce back, and allows re-entry',()=>{
+  const l=D.levels.find(l=>l.id==='5-01'),s=M.create(l);
+  M.move(s,0,1);assert.deepEqual(s.player,{x:4,y:4});assert.equal(s.portalLock,'A');
+  M.step(s,.2);assert.equal(s.player.y,4);
+  M.move(s,1,0);assert.equal(s.portalLock,null);M.step(s,.2);M.move(s,-1,0);assert.equal(s.player.y,1);
+});
+test('portal on an oscillating platform has safe arrival and carries its rider',()=>{
+  const l=D.levels.find(l=>l.id==='5-07');
+  for(let time=0;time<20;time+=.5){
+    const s=M.create(l);s.time=time;M.move(s,0,1);assert.equal(s.player.y,4);assert.equal(s.status,'playing');
+    const arrival=s.player.x;M.step(s,.2);assert.equal(s.status,'playing');
+    assert.ok(Math.abs(s.player.x-M.portalPosition(l,l.portals[1],s.time).x)<1e-8);assert.notEqual(s.player.x,arrival);
+  }
+});
