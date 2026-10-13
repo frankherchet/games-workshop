@@ -186,6 +186,7 @@
       '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtsteine</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div><div class="pz-hudcard pz-hud-breed"><span>Dein Pferd</span><b data-breed>Haflinger</b></div></div>',
       '  <button class="pz-role-switch" type="button" data-act="switch" title="Als Pferd oder Mensch spielen (Q)" hidden>🐎 Pferd spielen</button>',
       '  <button class="pz-mount-switch" type="button" data-act="mount" title="Auf- oder Absteigen (M)" hidden>🐴 Aufsteigen</button>',
+      '  <button class="pz-lead-switch" type="button" data-act="lead" title="Pferd am Zügel führen (L)" hidden>🤝 Führen</button>',
       '  <div class="pz-notice" role="status" aria-live="polite" data-notice>Willkommen im Tal der Wandelwinde!</div>',
       '  <div class="pz-pad" aria-label="Bewegen"><button data-move="up" aria-label="Vorwärts">▲</button><div><button data-move="left" aria-label="Nach links">◀</button><button data-move="down" aria-label="Rückwärts">▼</button><button data-move="right" aria-label="Nach rechts">▶</button></div></div>',
       '  <div class="pz-actions"><button data-act="interact" title="Interagieren (E)">✋ <span>Interaktion</span></button><button data-act="pace" title="Tempo für Mensch wechseln (R)">🏃 <span>Rennen</span></button><button data-act="transform" title="Verwandeln (T)">✦ <span>Verwandeln</span></button><button data-act="gait" title="Pferde-Gangart (G)">♞ <span>Schritt</span></button><button data-act="jump" title="Springen (Leertaste)">↥ <span>Springen</span></button></div>',
@@ -194,13 +195,15 @@
       '   <h2 class="pz-section-title">Wähle dein Pferd</h2>',
       '   <div class="pz-horses" role="group" aria-label="Fohlen, Ponys und Pferde">',horseCards,'   </div>',
       '   <p class="pz-selected" data-selection>Haflinger · Goldfuchs mit heller Mähne</p>',
+      '   <h2 class="pz-section-title">Reitkleidung wählen</h2>',
+      '   <div class="pz-outfits" role="group" aria-label="Kopfbedeckung und Reitkleidung"><button type="button" data-outfit="helmet" aria-pressed="true">⛑️ Reithelm &amp; Jacke</button><button type="button" data-outfit="cowboy" aria-pressed="false">🤠 Westernhut &amp; Weste</button><button type="button" data-outfit="cap" aria-pressed="false">🧢 Kappe &amp; Sportjacke</button></div>',
       '   <button type="button" class="pz-start" data-start>✨ Abenteuer starten →</button>',
       '   <p class="pz-note">Kostenlose 3D-Demo · kein Konto · noch keine Spielstand-Speicherung · keine externen Inhalte</p>',
       '  </div></div>',
       '  <div class="pz-error" data-error hidden></div>',
       ' </div>',
       ' <div class="pz-info"><p><strong>Deine neue Pferdewelt:</strong> Drei Pferdeherden, eine Ponygruppe und eine Fohlenwiese; dazu spazierende Menschen, Hasen und Vögel. Alle leben in deiner eigenen Einzelspielerwelt.</p><p><strong>Deine erste Mission:</strong> Hilf Mira, finde Lumi und führe das Fohlen sicher zum Stall. Danach erweckst du die Lichtquelle mit drei Fähigkeitssteinen. Der Wegweiser zeigt zum nächsten Ziel; aktiviere es mit E oder der goldenen Aktionsschaltfläche.</p>',
-      ' <div><strong>Aufs Pferd steigen:</strong> Im Modus „Mensch + Pferd“ neben dein Pony oder Pferd laufen und <kbd>M</kbd> oder „🐴 Aufsteigen“ drücken. Mit <kbd>M</kbd> wieder absteigen. <strong>Als Pferd spielen:</strong> <kbd>Q</kbd> oder „🐎 Pferd spielen“. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch-Tempo · <kbd>G</kbd> Pferdegangart · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Fohlen sind nicht reitbar.</div>',
+      ' <div><strong>Führen:</strong> Neben dein Pferd treten und <kbd>L</kbd> oder <strong>„🤝 Führen“</strong> wählen. Dein Mensch nimmt die Zügel und das Pferd läuft an seiner Seite. Nochmal drücken, um loszulassen. <strong>Aufs Pferd steigen:</strong> Im Modus „Mensch + Pferd“ neben dein Pony oder Pferd laufen und <kbd>M</kbd> oder „🐴 Aufsteigen“ drücken. Mit <kbd>M</kbd> wieder absteigen. <strong>Als Pferd spielen:</strong> <kbd>Q</kbd> oder „🐎 Pferd spielen“. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch-Tempo · <kbd>G</kbd> Pferdegangart · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Fohlen sind nicht reitbar.</div>',
       ' <div class="pz-more"><button data-act="follow">🐴 Begleiter: Folgen</button><button data-act="restart">↻ Neu beginnen</button></div>',
       ' <p class="pz-note">Dies ist eine erste spielbare Vorschau, noch kein fertiges Star-Stable-ähnliches Spiel. Aktuell werden weder Konten noch Online-Spielstände angelegt.</p></div>',
       '</div>',
@@ -216,7 +219,7 @@
     const breedText = shell.querySelector('[data-breed]');
     const selectionText = shell.querySelector('[data-selection]');
     const keys = new Set();
-    let selectedMode = 'duo', selectedHorseId = DEFAULT_HORSE;
+    let selectedMode = 'duo', selectedHorseId = DEFAULT_HORSE, selectedOutfitId='helmet';
     let state = newState('duo'), started = false, alive = true, raf = 0, last = 0, noticeUntil = 0;
     let cameraYaw = 0.18, camX = 0, camZ = 0, dragging = null;
     const questTitle=shell.querySelector('[data-quest-title]'), questText=shell.querySelector('[data-quest-text]');
@@ -224,6 +227,7 @@
     const interactButton=shell.querySelector('[data-act="interact"]');
     const roleButton=shell.querySelector('.pz-role-switch');
     const mountButton=shell.querySelector('.pz-mount-switch');
+    const leadButton=shell.querySelector('.pz-lead-switch');
     const paceButton=shell.querySelector('[data-act="pace"]');
     const gaitButton=shell.querySelector('[data-act="gait"]');
     const PI = Math.PI;
@@ -233,7 +237,7 @@
       noticeUntil = performance.now() + 3800;
     }
     function reset(mode) {
-      state = newState(mode, selectedHorseId);
+      state = newState(mode, selectedHorseId, selectedOutfitId);
       ambientLastUpdate=0;
       cameraYaw = 0.18; camX = state.player.x; camZ = state.player.z;
       started = true; entry.hidden = true;
@@ -267,6 +271,10 @@
       roleButton.hidden = state.mode !== 'duo' || !started || state.mounted;
       roleButton.textContent = switchLabel(state);
       mountButton.hidden = state.mode !== 'duo' || !started;
+      leadButton.hidden = state.mode !== 'duo' || !started;
+      leadButton.textContent = state.leading?'✋ Zügel loslassen':'🤝 Führen';
+      leadButton.setAttribute('aria-pressed',String(state.leading));
+      leadButton.disabled = state.mounted || state.player.form !== 'human' || state.active !== 'player' && !state.leading;
       const unrideable=horseById(state.companion.horseId).foal;
       mountButton.disabled = !state.mounted && (unrideable || state.player.form !== 'human');
       mountButton.textContent = state.mounted ? '↧ Absteigen' : unrideable ? '🐣 Fohlen nicht reitbar' : '🐴 Aufsteigen';
@@ -301,7 +309,20 @@
       if (act === 'pace') { if (cycleHumanPace(state)) hint('Mensch-Tempo: ' + HUMAN_PACES[state.humanPace].label); }
       if (act === 'transform') { if (transform(state)) hint(state.player.form === 'horse' ? 'Du bist jetzt ein Zauberpferd! ✨' : 'Zurückverwandelt: Du bist wieder Mensch!'); else if(state.mounted)hint('Steige zuerst mit M vom Pferd ab.'); }
       if (act === 'gait' && controlled(state).form === 'horse') { state.gait = (state.gait + 1) % 3; hint('Pferde-Gangart: ' + ['Schritt','Trab','Galopp'][state.gait]); }
-      if (act === 'follow') { state.following = !state.following; hint(state.following ? 'Dein Begleiter folgt dir.' : 'Dein Begleiter wartet.'); }
+      if (act === 'lead') {
+        const result=toggleLead(state);
+        hint({leading:'🤝 Du hältst die Zügel! Dein Pferd geht direkt neben dir. Mit L lässt du los.',
+          released:'Du hast die Zügel losgelassen. Dein Pferd wartet neben dir.',
+          tooFar:'Gehe bis dicht neben dein Pferd, um die Zügel zu nehmen.',
+          mounted:'Steige erst vom Pferd ab, um es zu führen.',
+          needHuman:'Steuere deinen Menschen, um das Pferd zu führen.',
+          horseOnly:'Im Nur-Pferd-Modus spielst du selbst das Pferd.'}[result]);
+      }
+      if (act === 'follow') {
+        if(state.leading)state.leading=false;
+        state.following = !state.following;
+        hint(state.following ? 'Dein Begleiter folgt dir frei.' : 'Dein Begleiter wartet.');
+      }
       if (act === 'jump') {
         const ent = state.active === 'player' ? state.player : state.companion;
         if (ent.jump <= 0) ent.jump = 0.001;
@@ -313,12 +334,18 @@
         button.setAttribute('aria-pressed', String(button.dataset.mode === selectedMode)));
       shell.querySelectorAll('[data-horse]').forEach(button =>
         button.setAttribute('aria-pressed', String(button.dataset.horse === selectedHorseId)));
+      shell.querySelectorAll('[data-outfit]').forEach(button =>
+        button.setAttribute('aria-pressed', String(button.dataset.outfit === selectedOutfitId)));
       const chosen = horseById(selectedHorseId);
       selectionText.textContent = chosen.name + ' · ' + chosen.detail + (chosen.foal ? ' · Nicht reitbar' : '');
     }
     function onClick(event) {
       const mode = event.target.closest('[data-mode]');
       if (mode && MODES.includes(mode.dataset.mode)) { selectedMode = mode.dataset.mode; updateSelection(); return; }
+      const outfit = event.target.closest('[data-outfit]');
+      if (outfit && Object.prototype.hasOwnProperty.call(OUTFIT_MAP,outfit.dataset.outfit)) {
+        selectedOutfitId=outfit.dataset.outfit;updateSelection();return;
+      }
       const horse = event.target.closest('[data-horse]');
       if (horse && Object.prototype.hasOwnProperty.call(HORSES,horse.dataset.horse)) { selectedHorseId = horse.dataset.horse; updateSelection(); return; }
       if (event.target.closest('[data-start]')) { reset(selectedMode); return; }
@@ -330,13 +357,14 @@
     function onKeyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey || !alive || !started || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
       const key = e.key.toLowerCase();
-      if (keyMap[key] || ['q','t','g','f','e','r','m',' '].includes(key)) e.preventDefault();
+      if (keyMap[key] || ['q','t','g','f','e','r','m','l',' '].includes(key)) e.preventDefault();
       if (keyMap[key]) keys.add(keyMap[key]);
       if (e.repeat) return;
       if (key === 'e') action('interact');
       if (key === 'q') action('switch');
       if (key === 'r') action('pace');
       if (key === 'm') action('mount');
+      if (key === 'l') action('lead');
       if (key === 't') action('transform');
       if (key === 'g') action('gait');
       if (key === 'f') action('follow');
@@ -752,7 +780,8 @@
         move(entity,dx,dz,movementSpeed(state),dt);
       }
       if(entity.jump>0){entity.jump+=dt;if(entity.jump>=.78)entity.jump=0;}
-      if(state.mode==='duo'&&state.following) {
+      if(state.leading)advanceLead(state,dt);
+      if(state.mode==='duo'&&state.following&&!state.leading) {
         const other=state.active==='player'?state.companion:state.player;
         const dx=entity.x-other.x,dz=entity.z-other.z,dist=Math.hypot(dx,dz);
         if(dist>2.5)move(other,dx,dz,Math.min(5,2.6+(dist-2.5)*.65),dt);
