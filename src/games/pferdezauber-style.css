@@ -164,3 +164,24 @@
 @media(max-width:700px) {
   .pz-mount-switch {top:130px;right:9px;min-height:43px;max-width:160px;padding:7px 10px;font-size:11px;border-radius:9px}
 }
+
+/* Ground leading and rider wardrobe: clear touch controls and selection. */
+.pz-lead-switch {
+  position:absolute;z-index:4;top:134px;right:16px;min-height:47px;
+  min-width:135px;max-width:205px;padding:10px 14px;
+  border:2px solid #d3edb0;border-radius:12px;background:#275840f2;
+  color:#f4ffe7;font-weight:850;font-size:13px;
+  box-shadow:0 4px 15px #122d2399;touch-action:manipulation
+}
+.pz-lead-switch:hover:not(:disabled) {background:#32744d}
+.pz-lead-switch[aria-pressed="true"] {background:#f2e7a8;color:#274e39;border-color:#fff6c9}
+.pz-lead-switch:disabled {opacity:.45;cursor:not-allowed}
+.pz-outfits {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:9px auto 11px;max-width:590px}
+.pz-outfits button {padding:10px 7px;min-height:51px;border:2px solid #61977b;border-radius:12px;background:#22463b;color:#f3f9ed;font-weight:750;font-size:12px;cursor:pointer}
+.pz-outfits button[aria-pressed="true"] {border-color:#ffeca6;box-shadow:0 0 0 2px #e7cf7888;background:#3c6250}
+.pz-outfits button:hover {border-color:#f2e7ae}
+@media (max-width:700px) {
+  .pz-lead-switch {right:9px;top:182px;min-height:41px;min-width:114px;padding:7px 10px;font-size:11px;border-radius:9px}
+  .pz-outfits {gap:5px;margin:7px auto}
+  .pz-outfits button {font-size:10px;padding:7px 4px;min-height:45px}
+}
