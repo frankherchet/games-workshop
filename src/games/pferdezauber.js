@@ -46,6 +46,7 @@
     s.player.z=Math.max(-29,Math.min(29,horse.z-Math.sin(horse.heading)*side));
     s.player.heading=horse.heading;
     s.player.jump=0;
+    horse.jump=0;
     s.mounted=false;
     s.active='player';
     return true;
