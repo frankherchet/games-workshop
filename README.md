@@ -16,7 +16,7 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 
 ## Geplante Spiele
 
-- **Frogger – Weltenhüpfer:** [Konzept mit drei Grafik-/Technikvarianten und fünf Welten à zehn Levels](docs/frogger.md). Grafikstil noch offen; noch keine spielbare Umsetzung.
+- **Frogger – Weltenhüpfer:** [Neon-Konzept mit fünf Welten à zehn Levels und drei Konzeptbildern](docs/frogger.md). Gewählter Stil: Neon in 2,5D mit Canvas 2D; noch keine spielbare Umsetzung.
 
 ## Entwickeln und prüfen
 

@@ -1,6 +1,6 @@
 # Frogger – modernes Spielkonzept
 
-Status: Konzept zur Auswahl, noch keine spielbare Umsetzung. Geplant sind fünf Welten mit jeweils zehn handgebauten Levels, insgesamt 50. Grafikstil und Technik sind Vorschläge; die Auswahl ist noch offen.
+Status: Grafikstil gewählt – **Neon-Illustration in 2,5D mit Canvas 2D** (Variante B), bestätigt am 13. Oktober 2026. Noch keine spielbare Umsetzung. Geplant sind fünf Welten mit jeweils zehn handgebauten Levels, insgesamt 50.
 
 ## Spielidee
 
@@ -12,11 +12,13 @@ Arbeitstitel im Katalog: **Frogger – Weltenhüpfer**, Kategorie Arcade, vorges
 
 | Variante | Bildsprache | Technik und Einbindung | Abwägung |
 | --- | --- | --- | --- |
-| **A: Lebendige 3D-Dioramen – Empfehlung** | Runde, plastische Low-Poly-Figuren, kleine Landschaften wie Spielzeugwelten, warme Farben, weiche Lichtverläufe, Wasserflächen und kurze Sprung-/Landeanimationen. Feste schräge Kamera ohne Kameradrehen. | Natives WebGL; vorhandene Erfahrung aus `src/games/pferdezauber.js` nutzen. Geometrie aus einfachen Formen, feste Kamera, wenige Materialien, Schatten zunächst als flache Formen. Keine zusätzliche Bibliothek. | Mein bevorzugter Kompromiss für diesen Bestand: deutlich moderner Look und gut lesbare Wege. 3D-Grafik und Geräteprüfung kosten mehr Aufwand als 2D; die bestehende Pferdewelt ist kein fertiger allgemeiner Renderer. |
-| **B: Neon-Illustration in 2,5D** | Dunkles Petrol, Türkis und Koralle, leuchtende Konturen, glatte Formen, perspektivisch gestaffelte Straßen, Wasserringe und sparsame Partikel. Kein Pixelraster. | Canvas 2D mit schräger Projektion, lokal gehosteten Illustrationen und prozeduralen Effekten. An bestehende Canvas-Spiele und den Asset-Build anknüpfen. Die Simulation bleibt auf einem normalen Raster. | Voraussichtlich der kleinste technische Ausbau; passt zum Arcade-Auftritt. Beleuchtung und räumliche Tiefe werden gezeichnet, dadurch ist der Effektumfang begrenzt. |
+| **A: Lebendige 3D-Dioramen** | Runde, plastische Low-Poly-Figuren, kleine Landschaften wie Spielzeugwelten, warme Farben, weiche Lichtverläufe, Wasserflächen und kurze Sprung-/Landeanimationen. Feste schräge Kamera ohne Kameradrehen. | Natives WebGL; vorhandene Erfahrung aus `src/games/pferdezauber.js` nutzen. Geometrie aus einfachen Formen, feste Kamera, wenige Materialien, Schatten zunächst als flache Formen. Keine zusätzliche Bibliothek. | Moderner Look und gut lesbare Wege. 3D-Grafik und Geräteprüfung kosten mehr Aufwand als 2D; die bestehende Pferdewelt ist kein fertiger allgemeiner Renderer. |
+| **B: Neon-Illustration in 2,5D – gewählt** | Dunkles Petrol, Türkis und Koralle, leuchtende Konturen, glatte Formen, perspektivisch gestaffelte Straßen, Wasserringe und sparsame Partikel. Kein Pixelraster. | Canvas 2D mit schräger Projektion, lokal gehosteten Illustrationen und prozeduralen Effekten. An bestehende Canvas-Spiele und den Asset-Build anknüpfen. Die Simulation bleibt auf einem normalen Raster. | Voraussichtlich der kleinste technische Ausbau; passt zum Arcade-Auftritt. Beleuchtung und räumliche Tiefe werden gezeichnet, dadurch ist der Effektumfang begrenzt. |
 | **C: Animiertes Bilderbuch** | Handgemalte Landschaften, Papiertexturen, üppige Pflanzen, expressive Frosch-Sprites, Aquarellwasser und sanftes Hintergrund-Parallax. Alle fünf Welten wirken wie Kapitel einer Reise. | Canvas 2D mit lokalen PNG-Sprite-Atlanten und getrennten Hintergrund-/Spielfigurenebenen. Vorhandene Sprite- und Asset-Muster aus Schneckenkampf nutzen. | Besonders charaktervoll und freundlich. Aufwand liegt vor allem bei konsistenten Illustrationen und Animationen; Bildgrößen und Ladezeiten müssen begrenzt werden. |
 
-Die drei Varianten sind Alternativen. Der gewählte Stil gilt für alle fünf Welten; es werden weder drei Renderer noch ein Stilumschalter gebaut. Die Aufwandseinschätzung ist eine Einschätzung anhand des Repositorys, kein bereits gemessener Vergleich.
+Variante B gilt für alle fünf Welten. A und C bleiben als verworfene Alternativen dokumentiert; es werden weder drei Renderer noch ein Stilumschalter gebaut. Die Aufwandseinschätzung ist eine Einschätzung anhand des Repositorys, kein bereits gemessener Vergleich.
+
+Das Neon-Konzeptbild ist die visuelle Referenz: dunkle Petrolflächen, türkisfarbenes Wasser, korallfarbene Akzente, sanfte Leuchtkonturen und eine feste schräge Ansicht. Die Welten behalten ihre eigene Farb- und Landschaftssprache, bekommen aber dieselbe klare Neon-Zeichnung. Gefahren und Landeflächen bleiben auch ohne Leuchteffekte lesbar. Umsetzung mit Canvas 2D und vorhandenen Asset-Mustern, ohne zusätzliche Grafikbibliothek.
 
 Technische Grundlagen: [Canvas API – MDN](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) beschreibt die 2D-Zeichen-API; [WebGL API – MDN](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API) beschreibt browserbasierte, hardwarebeschleunigte 2D-/3D-Grafik. Konkrete Bildrate, Qualität und Geräteunterstützung müssen am Prototyp geprüft werden.
 
@@ -28,7 +30,7 @@ Alle drei Bilder zeigen eine vergleichbare Sonnenauen-Szene mit Frosch, Fahrradw
 
 ![3D-Diorama mit plastischem Frosch, Fahrradweg und Teich](frogger-concepts/a-diorama.png)
 
-### B: Neon-Illustration in 2,5D
+### B: Neon-Illustration in 2,5D – gewählte Referenz
 
 ![Neon-Illustration mit Türkiswasser und leuchtenden Konturen](frogger-concepts/b-neon.png)
 
@@ -166,4 +168,4 @@ Fortschritt erhält einen eigenen versionierten Speicherschlüssel (`cs-games:fr
 
 Kein Multiplayer, kein Konto, keine Online-Bestenliste, kein Shop, kein Levelgenerator und kein frei steuerbares 3D-Kamerasystem. Audio gehört nicht zum ersten Ausschnitt; die Regeln müssen ohne Ton verständlich sein. Spätere Sounds benötigen eine eigene Umsetzung und passende Assets. Veröffentlichung erfolgt über den vorhandenen manuellen Freigabeprozess.
 
-Dieser PR liefert ausschließlich die drei Grafik-/Technikvorschläge und den 50-Level-Plan. Gameplay-Balance, Grafiken, Performance und reale Geräte sind noch nicht geprüft.
+Dieser PR liefert die Stilentscheidung für Neon in 2,5D, drei Konzeptbilder und den 50-Level-Plan. Die Konzeptbilder wurden visuell geprüft; Gameplay-Balance, implementierte Spielgrafik, Performance und reale Geräte sind noch nicht geprüft.
