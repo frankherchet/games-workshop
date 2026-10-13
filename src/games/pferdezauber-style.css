@@ -146,3 +146,7 @@
   .pz-role-switch {top:75px;right:9px;min-height:47px;max-width:145px;padding:8px 10px;font-size:11px;border-radius:10px}
   .pz-hud-breed {display:none}
 }
+
+/* Lebenswelt: status row above the first quest, restrained on small screens. */
+.pz-population {display:flex;justify-content:center;align-items:center;text-align:center;flex-wrap:wrap;min-height:34px;gap:6px;padding:8px 12px;margin:2px 0 13px;border:1px solid #3e725b;border-radius:10px;color:#d5ebd6;background:#17332d;font-size:12px;font-weight:650}
+@media(max-width:700px) {.pz-population {font-size:10px;line-height:1.4;padding:6px 9px}}
