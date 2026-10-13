@@ -521,8 +521,25 @@
         limb(m,pose,side*.37,.105+lift,z+pace,.25,.21,.33,[.32,.33,.34]);
       }
       blob(m,pose,0,1.08+base,-1.02,.17,.25,.55,breed.mane);
-      // Saddle blanket on the companion makes the two horses distinguishable.
-      if(isCompanion)blob(m,pose,0,1.83+base,-.12,.55,.12,.66,[.35,.56,.70]);
+      // Tack stays attached to the personal companion; wild herds and foals
+      // are untacked. Cloth, saddle seat, girth and stirrups are 3D meshes.
+      if(isCompanion && !breed.foal) {
+        const leather=[.31,.19,.14],gold=[.85,.70,.39];
+        blob(m,pose,0,1.79+base,-.16,.58,.12,.63,[.28,.46,.62]); // saddle cloth
+        blob(m,pose,0,1.91+base,-.18,.43,.13,.51,leather); // leather saddle
+        blob(m,pose,0,2.01+base,-.32,.33,.08,.27,[.21,.14,.11]); // seat
+        limb(m,pose,0,1.37+base,-.15,.06,.65,.08,[.40,.26,.17]); // belly girth
+        for(const side of [-1,1]) {
+          limb(m,pose,side*.53,1.42+base,-.17,.06,.72,.06,leather); // stirrup straps
+          limb(m,pose,side*.53,1.04+base,-.12,.19,.055,.16,gold); // metal stirrups
+          limb(m,pose,side*.25,1.91+base-graze,1.15,.058,.47,.063,leather); // cheek straps
+          limb(m,pose,side*.25,2.02+base-graze,.98,.052,.36,.06,leather);
+          limb(m,pose,side*.34,1.91+base,.69,.04,.055,.86,leather); // reins to hands
+        }
+        limb(m,pose,0,1.70+base-graze,1.38,.55,.07,.07,leather); // noseband
+        limb(m,pose,0,2.08+base-graze,1.08,.59,.06,.07,leather); // browband
+        limb(m,pose,0,1.67+base-graze,1.35,.62,.065,.065,gold); // bit
+      }
     }
     function human(m,p) {
       const moving=Math.sin(p.walk*9),lift=p.jump>0?Math.sin(p.jump*PI/.78)*.75:0;
@@ -536,6 +553,26 @@
         limb(m,p,side*.19,.43+lift,k,.23,.82,.27,jeans);
         limb(m,p,side*.19,.09+lift,k+.12,.27,.18,.39,[.31,.33,.37]);
         limb(m,p,side*.43,1.20+lift,-k,.18,.76,.22,skin);
+      }
+    }
+    function rider(m,p,t) {
+      // A seated rider is rendered above the moving saddle, never at ground level.
+      const horseScale=horseById(p.horseId).size;
+      const bob=Math.sin(p.walk*9)*.035*horseScale;
+      const jump=p.jump>0?Math.sin(p.jump*PI/.78)*.8*horseScale:0;
+      const hips=horseScale*2.03+bob+jump,pose={x:p.x,z:p.z,heading:p.heading};
+      const shirt=[.59,.44,.70],skin=[.91,.71,.56],jeans=[.30,.43,.62];
+      blob(m,pose,0,hips,-.22,.35,.21,.30,jeans); // hips resting on seat
+      limb(m,pose,0,hips+.54,-.08,.56,.87,.34,shirt);
+      blob(m,pose,0,hips+1.20,.02,.27,.30,.26,skin);
+      blob(m,pose,0,hips+1.46,-.06,.29,.17,.29,[.32,.23,.22]);
+      for(const side of [-1,1]) {
+        // Bent legs lie on opposite sides of the horse's body, feet in stirrups.
+        limb(m,pose,side*.39,hips-.27,-.03,.24,.67,.29,jeans);
+        limb(m,pose,side*.52,hips-.65,-.13,.25,.21,.37,[.20,.23,.25]);
+        // Arms reach forward to hold the reins.
+        limb(m,pose,side*.38,hips+.44,.24,.18,.67,.20,skin);
+        blob(m,pose,side*.35,hips+.13,.55,.11,.11,.11,skin);
       }
     }
     function sparkle(m,s,t) {
@@ -599,10 +636,13 @@
       const m=mesh();
       // A soft ground shadow anchors the stylised figures to the meadow.
       for(const p of state.mode==='duo'?[state.player,state.companion]:[state.player]) {
-        const s=p.form==='horse'?horseById(p.horseId).size:1;
-        ellipsoid(m,p.x,.01,p.z,.73*s,.022,.87*s,[.33,.52,.32]);
+        // The mounted human is drawn by rider() on top of the companion.
+        if(state.mounted && p===state.player)continue;
+        const scale=p.form==='horse'?horseById(p.horseId).size:1;
+        ellipsoid(m,p.x,.01,p.z,.73*scale,.022,.87*scale,[.33,.52,.32]);
         if(p.form==='human')human(m,p);else horse(m,p,t,p===state.companion);
       }
+      if(state.mounted)rider(m,state.companion,t);
       human(m,KEEPER);
       if(state.quest!=='meet' && state.quest!=='trail') {
         const foal=state.quest==='escort'||state.quest==='foal'?state.foal:{...state.foal,x:-12,z:7};
@@ -702,7 +742,7 @@
       gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       const entity=state.active==='player'?state.player:state.companion;
       camX+=(entity.x-camX)*Math.min(1,dt*7);camZ+=(entity.z-camZ)*Math.min(1,dt*7);
-      const visualHeight=entity.form==='human'?1.15:Math.max(.75,horseById(entity.horseId).size*1.15);
+      const visualHeight=state.mounted ? horseById(entity.horseId).size*2.35 : entity.form==='human'?1.15:Math.max(.75,horseById(entity.horseId).size*1.15);
       const eye=[camX-Math.sin(cameraYaw)*8.8,4.1+visualHeight,camZ-Math.cos(cameraYaw)*8.8];
       gl.uniformMatrix4fv(uPV,false,multiply(perspective(w/h),lookAt(eye,[camX,visualHeight,camZ])));
       draw(staticBuffer,null,gl.STATIC_DRAW);
