@@ -131,3 +131,18 @@
 }
 
 @media(max-width:680px) {.pz-quest {top:82px}}
+
+/* Clear human/horse controls: one prominent switch and separate gait / human pace. */
+.pz-role-switch {
+  position:absolute;z-index:3;top:17px;right:16px;min-height:51px;padding:11px 15px;
+  border-radius:13px;border:2px solid #ffe8a5;color:#193d2d;background:#ffe7aa;
+  font-weight:850;font-size:13px;box-shadow:0 4px 12px #193e3780;touch-action:manipulation
+}
+.pz-role-switch:hover {filter:brightness(1.08)}
+.pz-role-switch:active {transform:translateY(1px)}
+.pz-actions button[data-act="pace"]:not(:disabled) {background:#336f58eb;border-color:#d7f0a1}
+.pz-actions button[data-act="pace"]:disabled,.pz-actions button[data-act="gait"]:disabled {opacity:.4}
+@media (max-width:700px) {
+  .pz-role-switch {top:75px;right:9px;min-height:47px;max-width:145px;padding:8px 10px;font-size:11px;border-radius:10px}
+  .pz-hud-breed {display:none}
+}
