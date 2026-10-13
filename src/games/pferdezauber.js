@@ -171,6 +171,7 @@
     }
     function reset(mode) {
       state = newState(mode, selectedHorseId);
+      ambientLastUpdate=0;
       cameraYaw = 0.18; camX = state.player.x; camZ = state.player.z;
       started = true; entry.hidden = true;
       keys.clear(); updateHud();
@@ -500,6 +501,56 @@
       cone(m,s.x,y-.57,s.z,.23,.38,[1,.91,.61],4);
       ellipsoid(m,s.x,.02,s.z,.62,.025,.62,[.84,.78,.45]);
     }
+    // Static/animated wildlife uses a separate GPU buffer, regenerated only at
+    // 10 fps. Beyond 18m, horses use a smaller silhouette instead of full rigs.
+    function sceneAmbient(t) {
+      const m=mesh(), center=controlled(state);
+      for(const p of state.ambient.horses) {
+        const dist=distance(p,center);
+        if(dist>36)continue;
+        if(dist<18) {
+          horse(m,p,t,false);
+        } else {
+          const profile=horseById(p.horseId),pose={...p,horseScale:profile.size};
+          blob(m,pose,0,1.35,0,.58,.48,.95,profile.coat);
+          blob(m,pose,0,1.83,.83,.31,.35,.33,profile.coat);
+          blob(m,pose,0,1.67,1.13,.28,.21,.27,profile.muzzle);
+          for(const x of [-.37,.37])for(const z of [-.57,.60])
+            limb(m,pose,x,.53,z,.20,1.05,.23,profile.coat);
+        }
+      }
+      for(const p of state.ambient.people) {
+        const dist=distance(p,center);
+        if(dist>36)continue;
+        if(dist<23)human(m,p);
+        else {
+          const coats=[[.28,.59,.55],[.76,.47,.48],[.36,.49,.73],[.79,.67,.42]];
+          const coat=coats[p.style];
+          box(m,p.x,1.05,p.z,.52,1.15,.37,coat,p.heading);
+          ellipsoid(m,p.x,1.79,p.z,.28,.31,.25,[.88,.69,.56]);
+          for(const d of [-.15,.15])box(m,p.x+d,.32,p.z,.18,.64,.20,[.33,.41,.59]);
+        }
+      }
+      for(const p of state.ambient.rabbits) {
+        if(distance(p,center)>29)continue;
+        const bob=Math.max(0,Math.sin(t*2.6+p.phase))*.16;
+        ellipsoid(m,p.x,.32+bob,p.z,.33,.26,.45,[.77,.71,.61]);
+        ellipsoid(m,p.x,.48+bob,p.z+.28,.23,.22,.23,[.79,.74,.66]);
+        for(const x of [-.15,.15]) {
+          cone(m,p.x+x,.59+bob,p.z+.29,.085,.37,[.75,.64,.61],5);
+        }
+        ellipsoid(m,p.x,.37+bob,p.z-.47,.12,.12,.12,[.94,.90,.83]);
+      }
+      for(const p of state.ambient.birds) {
+        if(distance(p,center)>37)continue;
+        const y=4.1+Math.sin(t*1.3+p.phase)*.45;
+        ellipsoid(m,p.x,y,p.z,.19,.13,.33,[.27,.46,.56]);
+        const wing=.11+Math.abs(Math.sin(t*7+p.phase))*.20;
+        box(m,p.x-.31,y+wing,p.z,.57,.065,.16,[.31,.55,.63],.13);
+        box(m,p.x+.31,y+wing,p.z,.57,.065,.16,[.31,.55,.63],-.13);
+      }
+      return new Float32Array(m.a);
+    }
     function sceneDynamic(t) {
       const m=mesh();
       // A soft ground shadow anchors the stylised figures to the meadow.
@@ -552,14 +603,14 @@
       return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,
         -x[0]*eye[0]-x[1]*eye[1]-x[2]*eye[2],-y[0]*eye[0]-y[1]*eye[1]-y[2]*eye[2],-z[0]*eye[0]-z[1]*eye[1]-z[2]*eye[2],1]);
     }
-    function draw(buffer,data,usage) {
+    function draw(buffer,data,usage,existingCount=ground.length/9) {
       gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
       if(data)gl.bufferData(gl.ARRAY_BUFFER,data,usage);
       for(const [attr,offset] of [[aPos,0],[aNorm,12],[aColor,24]]) {
         gl.enableVertexAttribArray(attr);
         gl.vertexAttribPointer(attr,3,gl.FLOAT,false,36,offset);
       }
-      gl.drawArrays(gl.TRIANGLES,0,(data||ground).length/9);
+      gl.drawArrays(gl.TRIANGLES,0,data?data.length/9:existingCount);
     }
     function move(p,dx,dz,speed,dt) {
       const length=Math.hypot(dx,dz);
@@ -587,6 +638,7 @@
         if(dist>2.5)move(other,dx,dz,Math.min(5,2.6+(dist-2.5)*.65),dt);
       }
       advanceFoal(state,dt);
+      root.Arcade.pferdezauberWorld.tick(state.ambient,t,dt);
       updateObjective();
     }
     updateHud();
@@ -605,6 +657,16 @@
       const eye=[camX-Math.sin(cameraYaw)*8.8,4.1+visualHeight,camZ-Math.cos(cameraYaw)*8.8];
       gl.uniformMatrix4fv(uPV,false,multiply(perspective(w/h),lookAt(eye,[camX,visualHeight,camZ])));
       draw(staticBuffer,null,gl.STATIC_DRAW);
+      // Separating ambient geometry from the player prevents rebuilding every
+      // grazing horse, background person and bird on every animation frame.
+      if(now-ambientLastUpdate>=100 || ambientVertexCount===0) {
+        const data=sceneAmbient(now/1000);
+        ambientVertexCount=data.length/9;
+        draw(ambientBuffer,data,gl.DYNAMIC_DRAW);
+        ambientLastUpdate=now;
+      } else {
+        draw(ambientBuffer,null,gl.DYNAMIC_DRAW,ambientVertexCount);
+      }
       draw(dynamicBuffer,sceneDynamic(now/1000),gl.DYNAMIC_DRAW);
       raf=requestAnimationFrame(frame);
     }
@@ -621,7 +683,7 @@
         canvas.removeEventListener('pointerup',dragEnd);
         canvas.removeEventListener('pointercancel',dragEnd);
         for(const [el,down,up] of pads){el.removeEventListener('pointerdown',down);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);}
-        gl.deleteBuffer(staticBuffer);gl.deleteBuffer(dynamicBuffer);gl.deleteProgram(prog);
+        gl.deleteBuffer(staticBuffer);gl.deleteBuffer(dynamicBuffer);gl.deleteBuffer(ambientBuffer);gl.deleteProgram(prog);
       }
     };
   };
