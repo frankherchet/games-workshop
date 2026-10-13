@@ -14,6 +14,8 @@ jobs:
           persist-credentials: false
       - name: Test, build and check
         run: |
+          php -l server/feedback.php
+          php tests/feedback.test.php
           node --test tests/*.test.js
           python3 -m unittest discover -s tests -p 'test_*.py'
           node scripts/build.js
@@ -25,4 +27,5 @@ jobs:
             dist/index.html
             dist/assets/
             dist/assets-manifest.json
+            dist/feedback.php
           retention-days: 30

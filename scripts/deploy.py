@@ -1,4 +1,6 @@
-"""Publish the standalone page using explicit FTPS. Credentials never enter files."""
+"""Publish the standalone page using explicit FTPS. The feedback token is sent only to an executable PHP config, never packaged."""
+import base64
+import io
 import ftplib
 import hashlib
 import json
@@ -73,6 +75,36 @@ def upload(ftp, remote, page, release, assets=()):
     upload_file(ftp, page, 'index.html', f'.games-{release}.html.tmp')
 
 
+def feedback_config(token):
+    if not token or not re.fullmatch(r'[A-Za-z0-9_]+', token):
+        raise ValueError('FEEDBACK_GITHUB_TOKEN is missing or invalid.')
+    encoded = base64.b64encode(token.encode()).decode()
+    return ("<?php\nif (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }\nreturn base64_decode('" + encoded + "');\n").encode()
+
+
+def verify_feedback(site, context):
+    with urlopen(Request(site + 'feedback.php', headers={'Cache-Control': 'no-cache'}), timeout=30, context=context) as response:
+        parsed = urlparse(response.url)
+        if parsed.scheme != 'https' or parsed.hostname != 'games.computersys.de':
+            raise RuntimeError('Feedback redirects to an unexpected location.')
+        data = json.loads(response.read(4096))
+    if data.get('service') != 'games-feedback' or not re.fullmatch(r'[a-f0-9]{64}', data.get('csrf', '')):
+        raise RuntimeError('PHP execution could not be verified.')
+
+
+def upload_feedback(ftp, remote, release, site, context, config):
+    ftp.cwd(remote)
+    endpoint = Path('dist/feedback.php')
+    upload_file(ftp, endpoint, 'feedback.php', f'.games-{release}-feedback.php')
+    # Confirm PHP execution before any secret is sent to this hosting directory.
+    verify_feedback(site, context)
+    temporary = f'.games-{release}-config.php'
+    ftp.storbinary('STOR ' + temporary, io.BytesIO(config))
+    if ftp.size(temporary) != len(config):
+        raise RuntimeError('Uploaded config size does not match.')
+    ftp.rename(temporary, 'feedback-config.php')
+
+
 def verify_file(site, relative, source, release, context):
     request = Request(site + relative + '?release=' + release, headers={'Cache-Control': 'no-cache'})
     with urlopen(request, timeout=30, context=context) as response:
@@ -90,6 +122,9 @@ def main():
     if not page.is_file():
         raise ValueError('Build the page before deploying.')
     assets = assets_for(page.parent)
+    config = feedback_config(os.environ.get('FEEDBACK_GITHUB_TOKEN', ''))
+    if not Path('dist/feedback.php').is_file():
+        raise ValueError('Feedback endpoint is missing from build.')
     release = uuid.uuid4().hex
     context = ssl.create_default_context()
     with ftplib.FTP_TLS(context=context, timeout=30) as ftp:
@@ -98,6 +133,7 @@ def main():
         ftp.prot_p()
         ftp.set_pasv(True)
         ftp.voidcmd('TYPE I')
+        upload_feedback(ftp, remote, release, site, context, config)
         upload(ftp, remote, page, release, assets)
     for asset in assets:
         verify_file(site, 'assets/' + asset.name, asset, release, context)

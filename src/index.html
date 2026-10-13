@@ -16,5 +16,17 @@
   <main id="main" tabindex="-1"></main>
   <footer class="footer"><a class="footer-brand" href="#">COMPUTERSYS <b>GAMES</b></a><span>Selbst entwickelt. Kostenlos gespielt.</span><button class="text-button" data-info>Über diese Vorschau</button><span class="version">V0.3 · PFERDEZAUBER PROTOTYP</span></footer>
   <dialog id="info"><h2>Willkommen im Workshop</h2><p>Dies ist die erste spielbare Vorschau für games.computersys.de. Eigene Browsergames, ohne Anmeldung, externe Schriftarten oder Tracking.</p><p>Bestwerte werden nur in diesem Browser gespeichert. Betreiberangaben für Impressum und Datenschutz ergänzen wir vor der öffentlichen Veröffentlichung.</p><form method="dialog"><button class="button">Schließen</button></form></dialog>
+  <button class="button feedback-trigger" id="feedback-open">Bug / Wunsch</button>
+  <dialog id="feedback" aria-labelledby="feedback-title">
+    <h2 id="feedback-title">Was können wir verbessern?</h2>
+    <form id="feedback-form">
+      <label>Deine Meldung<select name="type"><option value="bug">Bug – etwas funktioniert nicht</option><option value="feature">Feature – ich wünsche mir etwas</option></select></label>
+      <label>Beschreibung<textarea name="description" required minlength="10" maxlength="4000" rows="5" placeholder="Was ist passiert? Was hast du erwartet? Oder: Was wünschst du dir?"></textarea></label>
+      <p>Die Meldung wird als öffentliches GitHub-Issue gespeichert. Bitte keine persönlichen Daten eingeben.</p>
+      <details><summary>Diese technischen Daten werden angehängt</summary><pre id="feedback-context"></pre></details>
+      <p id="feedback-status" role="status" aria-live="polite"></p>
+      <div class="feedback-actions"><button class="button" id="feedback-send" type="submit">Meldung senden</button><button class="button secondary" id="feedback-close" type="button">Schließen</button></div>
+    </form>
+  </dialog>
   <!-- SCRIPTS -->
 </body></html>

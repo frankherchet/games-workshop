@@ -10,13 +10,42 @@ spec.loader.exec_module(deploy)
 
 class DeploymentTests(unittest.TestCase):
     def config(self, **changes):
-        return dict(FTP_HOST='example.test', FTP_USER='test', FTP_PASSWORD='not-a-real-secret', FTP_REMOTE_DIR='/games', **changes)
+        return dict(FTP_HOST='example.test', FTP_USER='test', FTP_PASSWORD='not-a-real-secret', FTP_REMOTE_DIR='/games', FEEDBACK_GITHUB_TOKEN='test_token', **changes)
 
     def test_requires_explicit_directory(self):
         env = self.config()
         del env['FTP_REMOTE_DIR']
         with self.assertRaises(ValueError):
             deploy.configuration(env)
+
+    def test_feedback_secret_is_executable_php_and_rejects_injection(self):
+        config = deploy.feedback_config('not_a_real_token')
+        self.assertTrue(config.startswith(b'<?php'))
+        self.assertIn(b'http_response_code(404)', config)
+        self.assertNotIn(b'not_a_real_token', config)
+        for token in ['', "bad\nheader", "bad'php", 'bad/token']:
+            with self.assertRaises(ValueError): deploy.feedback_config(token)
+
+    def test_feedback_never_uploads_secret_before_php_verification(self):
+        from unittest.mock import patch, MagicMock
+        ftp = MagicMock()
+        with patch.object(deploy, 'upload_file') as endpoint, patch.object(deploy, 'verify_feedback', side_effect=RuntimeError('PHP unavailable')):
+            with self.assertRaises(RuntimeError):
+                deploy.upload_feedback(ftp, '/', 'release', 'https://games.computersys.de/', None, b'fake-config')
+            endpoint.assert_called_once()
+            ftp.storbinary.assert_not_called()
+
+    def test_feedback_config_upload_uses_php_suffix_and_size_check(self):
+        from unittest.mock import patch, MagicMock
+        ftp = MagicMock(); ftp.size.return_value = 11
+        with patch.object(deploy, 'upload_file'), patch.object(deploy, 'verify_feedback'):
+            deploy.upload_feedback(ftp, '/', 'release', 'https://games.computersys.de/', None, b'fake-config')
+            self.assertEqual(ftp.storbinary.call_args.args[0], 'STOR .games-release-config.php')
+            ftp.rename.assert_called_once_with('.games-release-config.php', 'feedback-config.php')
+            ftp.reset_mock(); ftp.size.return_value = 0
+            with self.assertRaises(RuntimeError):
+                deploy.upload_feedback(ftp, '/', 'release', 'https://games.computersys.de/', None, b'fake-config')
+            ftp.rename.assert_not_called()
 
     def test_rejects_traversal_and_command_injection(self):
         for directory in ['games', '/games/../', '/games\r\nDELE index.html']:
@@ -103,8 +132,9 @@ class DeploymentTests(unittest.TestCase):
     def test_main_loads_assets_before_connecting_and_verifies_both(self):
         from unittest.mock import patch, MagicMock
         with tempfile.TemporaryDirectory() as directory:
-            with patch.object(deploy, 'configuration', return_value=('/', 'https://games.computersys.de/')), patch.object(deploy.Path, 'is_file', return_value=True), patch.object(deploy, 'assets_for', return_value=[Path('dist/assets/example.png')]) as manifest, patch.object(deploy.ftplib, 'FTP_TLS') as tls, patch.dict(deploy.os.environ, self.config()), patch.object(deploy, 'upload') as upload, patch.object(deploy, 'verify_file') as verify:
+            with patch.object(deploy, 'configuration', return_value=('/', 'https://games.computersys.de/')), patch.object(deploy.Path, 'is_file', return_value=True), patch.object(deploy, 'assets_for', return_value=[Path('dist/assets/example.png')]) as manifest, patch.object(deploy.ftplib, 'FTP_TLS') as tls, patch.dict(deploy.os.environ, self.config()), patch.object(deploy, 'upload_feedback') as feedback, patch.object(deploy, 'upload') as upload, patch.object(deploy, 'verify_file') as verify:
                 deploy.main()
+                feedback.assert_called_once()
                 manifest.assert_called_once_with(Path('dist'))
                 self.assertEqual(len(upload.call_args.args[-1]), 1)
                 self.assertEqual([call.args[1] for call in verify.call_args_list], ['assets/example.png', ''])

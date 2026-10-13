@@ -22,6 +22,8 @@ jobs:
           persist-credentials: false
       - name: Test, build and check
         run: |
+          php -l server/feedback.php
+          php tests/feedback.test.php
           node --test tests/*.test.js
           python3 -m unittest discover -s tests -p 'test_*.py'
           node scripts/build.js
@@ -33,11 +35,13 @@ jobs:
             dist/index.html
             dist/assets/
             dist/assets-manifest.json
+            dist/feedback.php
           retention-days: 90
       - name: Publish via explicit FTPS and verify HTTPS
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
           FTP_REMOTE_DIR: '/'
         run: python3 scripts/deploy.py

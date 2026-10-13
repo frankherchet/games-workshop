@@ -19,10 +19,12 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 
 ## Entwickeln und prüfen
 
-Node.js 22+ und Python 3 genügen. Keine Paketinstallation notwendig.
+Node.js 22+, Python 3 und PHP 8.1+ mit cURL und mbstring genügen. Keine Paketinstallation notwendig.
 
 ```bash
 npm test
+php -l server/feedback.php
+php tests/feedback.test.php
 python3 -m unittest discover -s tests -p 'test_*.py'
 npm run build
 npm run check
@@ -32,7 +34,7 @@ Der Build erzeugt `dist/index.html` mit zusammengefügtem Code und einer lokal g
 
 ## Veröffentlichungen
 
-**Die Plattform ist veröffentlicht. Neue Änderungen werden nur nach Freigabe manuell veröffentlicht.** Der Prüfworkflow startet bei Änderungen; der Veröffentlichungsworkflow startet ausschließlich manuell und lädt nur `dist/index.html` hoch.
+**Die Plattform ist veröffentlicht. Neue Änderungen werden nur nach Freigabe manuell veröffentlicht.** Der Prüfworkflow startet bei Änderungen; der Veröffentlichungsworkflow startet ausschließlich manuell und lädt HTML, Grafiken und den PHP-Endpunkt hoch.
 
 GitHub-Environment **allinkl**:
 
@@ -41,6 +43,7 @@ GitHub-Environment **allinkl**:
 | Secret | FTP_HOST | ALL-INKL-Servername ohne Protokoll/Port, passend zum TLS-Zertifikat |
 | Secret | FTP_USER | Auf das Spieleverzeichnis eingeschränkter FTP-Benutzer |
 | Secret | FTP_PASSWORD | Dessen Passwort |
+| Secret | FEEDBACK_GITHUB_TOKEN | Fine-grained GitHub-Token nur für dieses Repository, Issues: write |
 | Workflow-Einstellung | FTP_REMOTE_DIR | Bestätigtes Ziel `/`, im manuellen Workflow fest eingetragen |
 
 Der aktuelle Workflow verwendet das vom Betreiber bestätigte Ziel `/`. Bei einem Wechsel des FTP-Benutzers oder Zielverzeichnisses muss die Zuordnung vor einem erneuten Upload bestätigt werden.
@@ -53,7 +56,22 @@ Vor der ersten Veröffentlichung:
 4. Optional unter Environment `allinkl` einen Required Reviewer konfigurieren, damit GitHub die Freigabe zusätzlich erzwingt.
 5. Nach ausdrücklicher Freigabe **Actions → Publish to ALL-INKL → Run workflow**, Branch `main`, Bestätigung `games.computersys.de`.
 
-Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüsseltem Datenkanal. Er lädt zuerst die im Manifest aufgeführten, mit Inhalts-Hash benannten Grafiken und zuletzt `index.html`. Jede Datei wird temporär übertragen, auf ihre Größe geprüft und per Rename veröffentlicht. Alte Grafiken bleiben für einen möglichen Rollback erhalten. Es gibt kein rekursives Löschen und keinen FTP-Klartext-Fallback. Danach prüft er die öffentlich ausgelieferten HTML- und Bildinhalte über HTTPS. Secrets werden nicht in Dateien geschrieben oder ausgegeben. FTPS, Ersetzen per Rename und HTTPS-Verifikation wurden beim ersten Plattform-Deployment erfolgreich geprüft.
+Der Uploader verwendet explizites FTPS mit Zertifikatsprüfung und verschlüsseltem Datenkanal. Er lädt zuerst die im Manifest aufgeführten, mit Inhalts-Hash benannten Grafiken und zuletzt `index.html`. Jede Datei wird temporär übertragen, auf ihre Größe geprüft und per Rename veröffentlicht. Alte Grafiken bleiben für einen möglichen Rollback erhalten. Es gibt kein rekursives Löschen und keinen FTP-Klartext-Fallback. Danach prüft er die öffentlich ausgelieferten HTML- und Bildinhalte über HTTPS. FTP-Secrets werden nicht in Dateien geschrieben oder ausgegeben. Der Feedback-Token wird ausschließlich in der geschützten PHP-Konfiguration auf dem Server gespeichert. FTPS, Ersetzen per Rename und HTTPS-Verifikation wurden beim ersten Plattform-Deployment erfolgreich geprüft.
+
+
+## Bugs und Feature-Wünsche
+
+„Bug / Wunsch“ öffnet auf allen Seiten ein kleines Popup. Der Nutzer wählt Bug oder Feature und beschreibt sein Anliegen (10–4000 Zeichen). Automatisch angehängt werden Seitenpfad und Route (ohne URL-Suchparameter), Spielname/ID, Build-Hash, Browserkennung, Sprache, Fenstergröße, Pixeldichte und Zeitpunkt beim Öffnen. Die Daten können vor dem Senden eingesehen werden. Keine Spielstände, Kontaktdaten oder Konsolenlogs werden gesammelt. Der Hinweis im Popup erklärt, dass die Meldung in einem öffentlichen GitHub-Issue landet.
+
+In den Vollbild-Spielansichten gibt es ebenfalls einen Meldebutton; er verlässt das Vollbild und öffnet das Formular. Laufende Arcade- und Schneckenkampf-Runden werden pausiert, Pferdezauber-Tasten werden freigegeben. Nach dem Schließen kann man weiterspielen. Fehler erhalten den eingegebenen Text; nach erfolgreichem Senden wird die Issue-Nummer angezeigt.
+
+Das Frontend sendet nur an den eigenen `feedback.php`-Endpunkt. Dieser legt Issues im fest vorgegebenen Repository `frankherchet/games-workshop` mit `[Bug]` oder `[Feature]` im Titel an. Der Token braucht laut [GitHub-Dokumentation](https://docs.github.com/en/rest/issues/issues#create-an-issue) ausschließlich Repository-Zugriff mit **Issues: write**. Als Secret `FEEDBACK_GITHUB_TOKEN` im GitHub-Environment `allinkl` hinterlegen; nicht ins Repository oder HTML schreiben.
+
+Beim manuellen Deployment wird erst der Endpunkt übertragen und über HTTPS geprüft, ob PHP mit cURL/mbstring ausgeführt wird. Erst danach wird der Token über FTPS aus dem Arbeitsspeicher in `feedback-config.php` geschrieben. Auch temporäre Konfigurationsdateien enden auf `.php`; direkter Webzugriff liefert 404. Der Token liegt weder im Build-Verzeichnis noch in Actions-Artefakten. Der Webspace muss PHP ausführen; die Serverkonfiguration darf PHP-Quelltexte niemals als Download ausliefern. PHP-Sessions und ein beschreibbares System-Temp-Verzeichnis müssen verfügbar sein.
+
+POSTs erfordern den Seiten-Origin und einen Sitzungstoken. Der Endpunkt begrenzt auf fünf Versuche pro IP und 30 insgesamt pro rollender Stunde, mit einer gesperrten Datei im System-Temp-Verzeichnis; dort werden nur gehashte IPs und Zeitpunkte für diese Stunde gespeichert. Fehlgeschlagene GitHub-Aufrufe zählen mit. Das begrenzt Spam, verhindert gezielten Missbrauch eines öffentlichen Formulars aber nicht vollständig. Bei Bedarf kann der Betreiber den Endpunkt sperren und den Token widerrufen. Nutzertexte werden für Markdown maskiert, insbesondere GitHub-Erwähnungen.
+
+Lokal: `npm run build`, anschließend `php -S 127.0.0.1:8087 -t dist`. Popup und Fehlerfälle funktionieren ohne Token. Produktive POSTs akzeptieren nur `https://games.computersys.de` als Origin. Ein echter GitHub-Aufruf und die ALL-INKL-PHP-Konfiguration werden erst bei der freigegebenen Veröffentlichung geprüft. Der bestehende manuelle Veröffentlichungsprozess bleibt bestehen.
 
 ## Wiederherstellung
 
