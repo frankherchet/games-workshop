@@ -60,7 +60,26 @@
       resolve(s);left-=slice;
     }
   }
-  const model={create,move,step,phase,objects,support,HOP,STEP};
+  function freshProgress(){return {version:1,stars:Array(50).fill(0),times:Array(50).fill(null),unlocked:0};}
+  function loadProgress(raw){
+    const result=freshProgress();
+    if(!raw||raw.version!==1||!Array.isArray(raw.stars)||!Array.isArray(raw.times)||raw.stars.length!==50||raw.times.length!==50)return result;
+    for(let i=0;i<50;i++){
+      const stars=raw.stars[i],time=raw.times[i];
+      if(Number.isInteger(stars)&&stars>=1&&stars<=3&&Number.isFinite(time)&&time>0&&time<=36000){result.stars[i]=stars;result.times[i]=time;}
+    }
+    while(result.unlocked<49&&result.stars[result.unlocked]>0)result.unlocked++;
+    return result;
+  }
+  function record(progress,s){
+    const i=D.levels.indexOf(s.level);
+    if(s.status!=='won'||i<0||i>progress.unlocked)return 0;
+    const stars=1+(s.collected.length===3?1:0)+(s.time<=s.level.targetTime?1:0);
+    progress.stars[i]=Math.max(progress.stars[i],stars);
+    const time=Math.max(.001,s.time);progress.times[i]=progress.times[i]===null?time:Math.min(progress.times[i],time);
+    progress.unlocked=Math.min(49,Math.max(progress.unlocked,i+1));return stars;
+  }
+  const model={create,move,step,phase,objects,support,freshProgress,loadProgress,record,HOP,STEP};
   root.FroggerModel=model;
   if(typeof module!=='undefined'&&module.exports)module.exports=model;
 })(globalThis);
