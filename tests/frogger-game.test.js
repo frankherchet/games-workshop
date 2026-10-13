@@ -16,10 +16,11 @@ class Target{
   contains(){return false;}
   count(){return [...this.listeners.values()].reduce((n,s)=>n+s.size,0);}
 }
-function environment({blocked=false,raw=null}={}){
+function environment({blocked=false,raw=null,width=960,height=width*.75,pixelRatio=1}={}){
   const host=new Target(),doc=new Target(),win=new Target(),canvas=new Target(),overlay=new Target(),status=new Target(),info=new Target(),nodes=new Map(),queue=new Map(),stored=new Map();
   let id=0,clock=0,drawn=null,fullscreenDisposed=false;
-  canvas.getContext=()=>({});canvas.setPointerCapture=()=>{};
+  canvas.getContext=()=>({setTransform(){}});canvas.setPointerCapture=()=>{};
+  canvas.getBoundingClientRect=()=>({width,height});win.devicePixelRatio=pixelRatio;
   doc.querySelector=()=>info;
   nodes.set('canvas',canvas);nodes.set('.fg-overlay',overlay);nodes.set('.fg-status',status);
   host.querySelector=selector=>{if(!nodes.has(selector))nodes.set(selector,new Target());return nodes.get(selector);};
@@ -63,4 +64,9 @@ test('platform info pauses the game and retains native dialog key handling',()=>
   const e=environment();assert.match(e.overlay.innerHTML,/href="#alle"/);e.click({level:'0'});e.tick(.5);e.info.emit('click');e.tick(2);assert.ok(Math.abs(e.drawn.time-.5)<1e-8);
   let prevented=false;e.doc.emit('keydown',{key:'Escape',target:{closest:selector=>selector==='dialog'?{}:null},preventDefault(){prevented=true;}});
   assert.equal(prevented,false);e.tick(1);assert.ok(Math.abs(e.drawn.time-.5)<1e-8);e.game.dispose();
+});
+test('canvas resolution follows displayed size and pixel density within budget',()=>{
+  for(const [width,pixelRatio,expected,height]of [[320,2,640],[960,2,1920],[1600,3,1920],[320,1,480],[1600,2,960,360]]){
+    const e=environment({width,height,pixelRatio});assert.equal(e.canvas.width,expected);assert.equal(e.canvas.height,expected*.75);e.game.dispose();
+  }
 });

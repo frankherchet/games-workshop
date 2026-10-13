@@ -1,6 +1,18 @@
 # Frogger – modernes Spielkonzept
 
-Status: **Neon-Illustration in 2,5D mit Canvas 2D** (Variante B), bestätigt am 13. Oktober 2026. Die fünf Welten mit jeweils zehn festen Levels sind spielbar implementiert im PR #7; noch nicht veröffentlicht. [Implementierungsplan mit Milestones und GitHub-Issues](frogger-plan.md).
+Status: **Neon-Illustration in 2,5D mit Canvas 2D** (Variante B), bestätigt am 13. Oktober 2026. Die erste Version aus PR #7 ist unter [games.computersys.de](https://games.computersys.de/#spiel/frogger) veröffentlicht. [Implementierungsplan mit Milestones und GitHub-Issues](frogger-plan.md).
+
+## Grafiküberarbeitung – zur Review
+
+Die neue Zeichnung ergänzt Farbverläufe und Kontaktschatten, Holzmaserung und Stirnringe an Baumstämmen, Wasserringe, Seerosenblüten und klarere Krokodilaugen. Der Frosch erhält Bauch, Zehen, Wangen und Augenreflexe. Fahrzeuge haben plastische Karosserien, Fensterreflexe, Reifen und gerichtete Leuchten. Waldkronen, beleuchtete Stadtfenster, Polarlichtbänder und ein Planet mit Ring geben den Welten mehr Eigenständigkeit; dichtere Randpflanzen bleiben außerhalb der Wege und Warnschilder.
+
+![Grafiküberarbeitung in der lokalen Spielansicht](frogger-concepts/neon-graphics-v2.jpg)
+
+Canvas richtet seine Zeichenauflösung nach der tatsächlich sichtbaren Fläche und Pixeldichte aus, einschließlich Letterboxing; die maximale Fläche bleibt 1920 × 1440 Pixel. So wird auf kleinen Ansichten weniger gezeichnet und auf hochauflösenden Displays schärfer dargestellt. Vollständig außerhalb des Spielfelds liegende bewegliche Objekte werden beim Zeichnen übersprungen. Keine neuen Bildassets zur Laufzeit, keine zusätzliche Bibliothek und keine Änderungen an Regeln, Karten oder Spielständen.
+
+Prüfung dieser Änderung: 158 Node-Tests, Build und Projektcheck bestehen. Die bestehenden Zeichentests prüfen alle 50 Karten, Zustandsunveränderlichkeit und reduzierte Bewegung; ein zusätzlicher Test prüft die Auflösung bei kleinen Ansichten, Retina, Letterboxing und maximaler Pixeldichte. Alle fünf Welten und die mobile Ansicht (390 × 844) wurden im Browser geöffnet und visuell geprüft; die Konsole meldet keine Warnungen oder Fehler. Das Bild stammt aus einer lokalen Vorschauseite mit eigenem Speicherschlüssel und freigeschalteten Testlevels.
+
+Die Grafiküberarbeitung ist noch nicht veröffentlicht. GPU-/FPS-Messungen auf echten Geräten stehen aus; die Uploadertests wurden für diese reine Grafikänderung nicht erneut ausgeführt.
 
 ## Implementierungs- und Prüfstand
 
@@ -16,7 +28,7 @@ Screenshot aus einer getrennten lokalen QA-Seite mit freigeschalteten Testlevels
 
 **Browser:** Levelabschluss per Tastatur, Freischaltung und Bestzeit nach Neuladen, Rücksetzbestätigung mit Abbruch, Pause einschließlich Plattform-Infodialog mit Escape-Rückkehr, Dialogfokus mit Tab/Shift+Tab, Richtungsbuttons und Wischgeste bis zum Ziel sowie Portalankunft auf beweglicher Plattform geprüft. Alle fünf Welten visuell geöffnet. Hochkant 390 × 844, Querformat 844 × 390 und Desktopansicht geprüft; Richtungsbuttons im Querformat sind 54 × 44 CSS-Pixel groß. Native Vollbildansicht und Rückkehr per Button/Escape geprüft. Browser-Konsole ohne Warnungen oder Fehler.
 
-**Offen:** echte iPad-/Smartphone-Prüfung, mehrere Browser-Engines, belastbare Geräte-Performancewerte und Spielbalance mit menschlichen Testspielern. Der Solver weist die Lösbarkeit nach, nicht die passende Schwierigkeit. Bei künstlichem Viewport-Wechsel in nativer Vollbildansicht zeigte der Testbrowser eine skalierte Ansicht; Vollbild ohne Viewport-Override funktioniert. Reale Drehung im nativen Vollbild gehört deshalb ausdrücklich zur Geräteabnahme. Issue #15 und M6 bleiben bis zur Geräteabnahme offen. Kein Audio, kein Deployment und kein Merge.
+**Offen:** echte iPad-/Smartphone-Prüfung, mehrere Browser-Engines, belastbare Geräte-Performancewerte und Spielbalance mit menschlichen Testspielern. Der Solver weist die Lösbarkeit nach, nicht die passende Schwierigkeit. Bei künstlichem Viewport-Wechsel in nativer Vollbildansicht zeigte der Testbrowser eine skalierte Ansicht; Vollbild ohne Viewport-Override funktioniert. Reale Drehung im nativen Vollbild gehört deshalb ausdrücklich zur Geräteabnahme. Issue #15 und M6 bleiben bis zur Geräteabnahme offen. Kein Audio. Die erste Version wurde nach Freigabe veröffentlicht; der neue Grafikstand wartet auf Review und Freigabe.
 
 ## Spielidee
 
