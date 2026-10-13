@@ -20,6 +20,22 @@ Die drei Varianten sind Alternativen. Der gewählte Stil gilt für alle fünf We
 
 Technische Grundlagen: [Canvas API – MDN](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) beschreibt die 2D-Zeichen-API; [WebGL API – MDN](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API) beschreibt browserbasierte, hardwarebeschleunigte 2D-/3D-Grafik. Konkrete Bildrate, Qualität und Geräteunterstützung müssen am Prototyp geprüft werden.
 
+## Konzeptbilder zur Stilwahl
+
+Alle drei Bilder zeigen eine vergleichbare Sonnenauen-Szene mit Frosch, Fahrradweg, Teichquerung und Zielsteg. Mit dem eingebauten Imagegen-Tool erzeugte Illustrationen; keine Screenshots oder zugesicherte Renderqualität der späteren Umsetzung. [Verwendete Prompts](frogger-concepts/prompts.md).
+
+### A: Lebendige 3D-Dioramen
+
+![3D-Diorama mit plastischem Frosch, Fahrradweg und Teich](frogger-concepts/a-diorama.png)
+
+### B: Neon-Illustration in 2,5D
+
+![Neon-Illustration mit Türkiswasser und leuchtenden Konturen](frogger-concepts/b-neon.png)
+
+### C: Animiertes Bilderbuch
+
+![Handgemalte Gartenszene mit Aquarellwasser und Frosch](frogger-concepts/c-bilderbuch.png)
+
 ## Gemeinsame Spielregeln
 
 - Ein Tastendruck oder Wisch entspricht einem Raster-Schritt; Animation und Kollisionsprüfung folgen derselben Position. Pfeiltasten/WASD und vier große Touch-Richtungstasten bieten die vollständige Steuerung. Touch-Buttons bleiben auch ohne Wischgesten bedienbar.
