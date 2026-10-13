@@ -375,3 +375,104 @@ test('mounted rider does not alter the solo NPC world or rescue quest', () => {
   assert.equal(logic.dismount(state),false);
   assert.equal(state.quest,'meet');
 });
+
+
+test('human can take the reins nearby; companion tracks the hand and waits after release', () => {
+  const s=logic.newState('duo','haflinger');
+  assert.equal(logic.toggleLead(s),'leading');
+  assert.equal(s.leading,true);
+  assert.equal(s.following,false);
+  assert.equal(s.active,'player');
+  assert.equal(s.player.form,'human');
+  const target=logic.leadTarget(s);
+  const before=Math.hypot(s.companion.x-target.x,s.companion.z-target.z);
+  logic.advanceLead(s,.15);
+  const after=Math.hypot(s.companion.x-target.x,s.companion.z-target.z);
+  assert.ok(after < before, 'horse follows the leading hand');
+  s.player.x=8;s.player.z=10;s.player.heading=.3;
+  for(let t=0;t<60;t++)logic.advanceLead(s,.04);
+  const next=logic.leadTarget(s);
+  assert.ok(Math.hypot(s.companion.x-next.x,s.companion.z-next.z)<.15);
+  assert.equal(logic.toggleLead(s),'released');
+  assert.equal(s.leading,false);
+  assert.equal(s.following,false);
+  const unchanged=s.companion.x;
+  logic.advanceLead(s,.5);
+  assert.equal(s.companion.x,unchanged);
+});
+
+test('reins cannot be taken from a distance, when riding, or in horse-only mode', () => {
+  const s=logic.newState('duo','shetland');
+  s.companion.x=22;s.companion.z=23;
+  assert.equal(logic.toggleLead(s),'tooFar');
+  assert.equal(s.leading,false);
+  s.companion.x=s.player.x;s.companion.z=s.player.z;
+  assert.equal(logic.mountOrDismount(s),'mounted');
+  assert.equal(logic.toggleLead(s),'mounted');
+  assert.equal(logic.switchTarget(s),true); // dismount
+  s.player.x=s.companion.x;s.player.z=s.companion.z;
+  assert.equal(logic.toggleLead(s),'leading');
+  assert.equal(logic.transform(s),false);
+  assert.equal(s.player.form,'human');
+  assert.equal(logic.mountOrDismount(s),'mounted'); // hand releases rein
+  assert.equal(s.leading,false);
+  assert.equal(logic.toggleLead(logic.newState('horseOnly')),'horseOnly');
+});
+
+test('changing control between human and companion releases held reins', () => {
+  const s=logic.newState('duo');
+  assert.equal(logic.toggleLead(s),'leading');
+  assert.equal(logic.switchTarget(s),true);
+  assert.equal(s.active,'companion');
+  assert.equal(s.leading,false);
+  assert.equal(logic.toggleLead(s),'needHuman');
+});
+
+test('both companion foals have a halter at the lead attachment and remain unrideable', () => {
+  const renderer={Math,PI:Math.PI,horseById:logic.horseById};
+  // Run the actual horse and rope geometry with primitive collectors.
+  const geometry=[];
+  renderer.limb=(...args)=>geometry.push({kind:'strap',args});
+  renderer.blob=(...args)=>geometry.push({kind:'blob',args});
+  renderer.cord=(m,a,b)=>geometry.push({kind:'rope',a,b});
+  vm.runInNewContext(source.slice(source.indexOf('    function local('),source.indexOf('    function limb('))+
+    source.slice(source.indexOf('    function leadRope('),source.indexOf('    function human(')),renderer);
+  for(const horseId of ['foal-brown','foal-black']) {
+    const state=logic.newState('duo',horseId);
+    state.companion.heading=.7;
+    state.companion.walk=.2;
+    assert.equal(logic.toggleLead(state),'leading');
+    assert.equal(logic.mountOrDismount(state),'foal');
+    renderer.state=state;
+    geometry.length=0;
+    renderer.horse({},state.companion,0,true);
+    const straps=geometry.filter(g=>g.kind==='strap'&&g.args[3]>1.5);
+    assert.ok(straps.length>=6,'visible straps surround the head and muzzle');
+    assert.ok(!geometry.some(g=>g.kind==='blob'&&g.args[3]===1.91+Math.sin(.2*9)*.035),'no saddle');
+    const buckle=geometry.find(g=>g.kind==='blob'&&g.args[2]===.12);
+    assert.ok(buckle,'halter has a lead attachment');
+    const attachment=renderer.local(...buckle.args.slice(1,5));
+    renderer.leadRope({});
+    const end=geometry.filter(g=>g.kind==='rope').at(-1).b;
+    assert.deepEqual(Array.from(end),Array.from(attachment));
+    state.player.jump=.3;
+    renderer.leadRope({});
+    const hand=geometry.filter(g=>g.kind==='rope').at(-2).a;
+    assert.equal(hand[1],1.05+Math.sin(.3*Math.PI/.78)*.75);
+    geometry.length=0;
+    renderer.horse({},state.companion,0,false);
+    assert.ok(!geometry.some(g=>g.kind==='blob'&&g.args[2]===.12),'wild foals have no halter');
+  }
+});
+
+test('helmet, Western hat, and cap outfits are selectable and sanitized', () => {
+  assert.equal(logic.outfits.length,3);
+  assert.equal(logic.newState('duo','haflinger').player.outfitId,'helmet');
+  assert.equal(logic.newState('duo','haflinger','cowboy').player.outfitId,'cowboy');
+  assert.equal(logic.newState('duo','haflinger','cap').player.outfitId,'cap');
+  assert.equal(logic.newState('duo','haflinger','__proto__').player.outfitId,'helmet');
+  for (const outfit of logic.outfits) {
+    assert.equal(outfit.pants.length,3);
+    assert.equal(outfit.shirt.length,3);
+  }
+});

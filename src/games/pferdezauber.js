@@ -5,6 +5,13 @@
   // Node.js is needed to play it on the ALL-INKL webspace.
   const MODES = ['duo', 'horseOnly'];
   const SPEEDS = [2.7, 4.4, 6.6];
+  const OUTFITS = Object.freeze([
+    {id:'helmet',label:'Reithelm & Jacke',shirt:[.40,.39,.70],hat:'helmet',pants:[.30,.36,.46]},
+    {id:'cowboy',label:'Westernhut & Weste',shirt:[.60,.38,.23],hat:'cowboy',pants:[.36,.47,.60]},
+    {id:'cap',label:'Kappe & Sportjacke',shirt:[.20,.63,.57],hat:'cap',pants:[.26,.39,.51]}
+  ]);
+  const OUTFIT_MAP=Object.fromEntries(OUTFITS.map(o=>[o.id,o]));
+  function outfitById(id){return Object.prototype.hasOwnProperty.call(OUTFIT_MAP,id)?OUTFIT_MAP[id]:OUTFITS[0];}
   const HUMAN_PACES = Object.freeze([
     { label:'Gehen', speed:2.8 },
     { label:'Rennen', speed:5.2 },
@@ -22,12 +29,12 @@
   const HORSES = Object.fromEntries(HORSE_CATALOG.map(h => [h.id,h]));
   const DEFAULT_HORSE = 'haflinger';
   function horseById(id) { return Object.prototype.hasOwnProperty.call(HORSES,id) ? HORSES[id] : HORSES[DEFAULT_HORSE]; }
-  function newState(mode, horseId=DEFAULT_HORSE) {
+  function newState(mode, horseId=DEFAULT_HORSE, outfitId='helmet') {
     return {
       mode: MODES.includes(mode) ? mode : 'duo',
-      player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, jump: 0, walk: 0 },
+      player: { x: 0, z: -1, heading: 0, form: mode === 'horseOnly' ? 'horse' : 'human', horseId: horseById(horseId).id, outfitId: outfitById(outfitId).id, jump: 0, walk: 0 },
       companion: { x: 1.7, z: -2.5, heading: 0, form: 'horse', horseId: horseById(horseId).id, jump: 0, walk: 0 },
-      active: 'player', gait: 0, humanPace: 1, following: true, mounted: false, stars: [false, false, false],
+      active: 'player', gait: 0, humanPace: 1, following: true, leading: false, mounted: false, stars: [false, false, false],
       quest: 'meet', trail: 0, foal: { x: -13, z: -12, heading: 0, form: 'horse', horseId: 'foal-brown', jump: 0, walk: 0 },
       ambient: root.Arcade.pferdezauberWorld.create(),
     };
@@ -50,6 +57,7 @@
     if(s.player.form!=='human')return 'needHuman';
     if(horseById(s.companion.horseId).foal)return 'foal';
     if(Math.hypot(s.player.x-s.companion.x,s.player.z-s.companion.z)>2.8)return 'tooFar';
+    s.leading=false;
     s.mounted=true;
     s.active='companion';
     s.player.x=s.companion.x; s.player.z=s.companion.z;
@@ -59,11 +67,12 @@
   function switchTarget(s) {
     if (s.mode !== 'duo') return false;
     if (s.mounted) return dismount(s);
+    s.leading=false;
     s.active = s.active === 'player' ? 'companion' : 'player';
     return true;
   }
   function transform(s) {
-    if (s.mode !== 'duo' || s.mounted) return false;
+    if (s.mode !== 'duo' || s.mounted || s.leading) return false;
     s.player.form = s.player.form === 'human' ? 'horse' : 'human';
     return true;
   }
@@ -82,6 +91,33 @@
   function movementSpeed(s) {
     const entity = controlled(s);
     return entity.form === 'human' ? HUMAN_PACES[s.humanPace].speed : SPEEDS[s.gait] * horseById(entity.horseId).speed;
+  }
+  function toggleLead(s) {
+    if(s.mode!=='duo')return 'horseOnly';
+    if(s.leading) {
+      s.leading=false;
+      s.following=false; // Released horse stays nearby until follow is enabled again.
+      return 'released';
+    }
+    if(s.mounted)return 'mounted';
+    if(s.active!=='player'||s.player.form!=='human')return 'needHuman';
+    if(distance(s.player,s.companion)>2.75)return 'tooFar';
+    s.leading=true;s.following=false;
+    return 'leading';
+  }
+  function leadTarget(s) {
+    const p=s.player,co=Math.cos(p.heading),si=Math.sin(p.heading);
+    return {x:p.x+co*1.10-si*.75,z:p.z-si*1.10-co*.75};
+  }
+  function advanceLead(s,dt) {
+    if(!s.leading)return;
+    const h=s.companion,target=leadTarget(s);
+    const dx=target.x-h.x,dz=target.z-h.z,dist=Math.hypot(dx,dz);
+    if(dist<.04)return;
+    const step=Math.min(dist,Math.max(3,HUMAN_PACES[s.humanPace].speed+2)*dt);
+    h.x=Math.max(-29,Math.min(29,h.x+dx/dist*step));
+    h.z=Math.max(-29,Math.min(29,h.z+dz/dist*step));
+    if(step>.005){h.heading=Math.atan2(dx,dz);h.walk+=step/3;}
   }
   function switchLabel(s) {
     if (s.mode !== 'duo') return '';
@@ -131,7 +167,7 @@
       f.x+=dx/dist*step; f.z+=dz/dist*step; f.heading=Math.atan2(dx,dz); f.walk+=step/3;
     }
   }
-  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld, mountOrDismount, dismount };
+  root.Arcade.pferdezauberLogic = { newState, switchTarget, transform, collected, horseById, catalog: HORSE_CATALOG, objective, interact, advanceFoal, cycleHumanPace, movementSpeed, switchLabel, humanPaces: HUMAN_PACES, world: root.Arcade.pferdezauberWorld, mountOrDismount, dismount, toggleLead, advanceLead, leadTarget, outfitById, outfits:OUTFITS };
 
 
   root.Arcade.games.pferdezauber = function ({ host }) {
@@ -151,6 +187,7 @@
       '  <div class="pz-hud"><div class="pz-hudcard"><span>✨ Lichtsteine</span><b data-stars>0 / 3</b></div><div class="pz-hudcard"><span>Du steuerst</span><b data-active>Mensch</b></div><div class="pz-hudcard pz-hud-breed"><span>Dein Pferd</span><b data-breed>Haflinger</b></div></div>',
       '  <button class="pz-role-switch" type="button" data-act="switch" title="Als Pferd oder Mensch spielen (Q)" hidden>🐎 Pferd spielen</button>',
       '  <button class="pz-mount-switch" type="button" data-act="mount" title="Auf- oder Absteigen (M)" hidden>🐴 Aufsteigen</button>',
+      '  <button class="pz-lead-switch" type="button" data-act="lead" title="Pferd am Zügel führen (L)" hidden>🤝 Führen</button>',
       '  <div class="pz-notice" role="status" aria-live="polite" data-notice>Willkommen im Tal der Wandelwinde!</div>',
       '  <div class="pz-pad" aria-label="Bewegen"><button data-move="up" aria-label="Vorwärts">▲</button><div><button data-move="left" aria-label="Nach links">◀</button><button data-move="down" aria-label="Rückwärts">▼</button><button data-move="right" aria-label="Nach rechts">▶</button></div></div>',
       '  <div class="pz-actions"><button data-act="interact" title="Interagieren (E)">✋ <span>Interaktion</span></button><button data-act="pace" title="Tempo für Mensch wechseln (R)">🏃 <span>Rennen</span></button><button data-act="transform" title="Verwandeln (T)">✦ <span>Verwandeln</span></button><button data-act="gait" title="Pferde-Gangart (G)">♞ <span>Schritt</span></button><button data-act="jump" title="Springen (Leertaste)">↥ <span>Springen</span></button></div>',
@@ -159,13 +196,15 @@
       '   <h2 class="pz-section-title">Wähle dein Pferd</h2>',
       '   <div class="pz-horses" role="group" aria-label="Fohlen, Ponys und Pferde">',horseCards,'   </div>',
       '   <p class="pz-selected" data-selection>Haflinger · Goldfuchs mit heller Mähne</p>',
+      '   <h2 class="pz-section-title">Reitkleidung wählen</h2>',
+      '   <div class="pz-outfits" role="group" aria-label="Kopfbedeckung und Reitkleidung"><button type="button" data-outfit="helmet" aria-pressed="true">⛑️ Reithelm &amp; Jacke</button><button type="button" data-outfit="cowboy" aria-pressed="false">🤠 Westernhut &amp; Weste</button><button type="button" data-outfit="cap" aria-pressed="false">🧢 Kappe &amp; Sportjacke</button></div>',
       '   <button type="button" class="pz-start" data-start>✨ Abenteuer starten →</button>',
       '   <p class="pz-note">Kostenlose 3D-Demo · kein Konto · noch keine Spielstand-Speicherung · keine externen Inhalte</p>',
       '  </div></div>',
       '  <div class="pz-error" data-error hidden></div>',
       ' </div>',
       ' <div class="pz-info"><p><strong>Deine neue Pferdewelt:</strong> Drei Pferdeherden, eine Ponygruppe und eine Fohlenwiese; dazu spazierende Menschen, Hasen und Vögel. Alle leben in deiner eigenen Einzelspielerwelt.</p><p><strong>Deine erste Mission:</strong> Hilf Mira, finde Lumi und führe das Fohlen sicher zum Stall. Danach erweckst du die Lichtquelle mit drei Fähigkeitssteinen. Der Wegweiser zeigt zum nächsten Ziel; aktiviere es mit E oder der goldenen Aktionsschaltfläche.</p>',
-      ' <div><strong>Aufs Pferd steigen:</strong> Im Modus „Mensch + Pferd“ neben dein Pony oder Pferd laufen und <kbd>M</kbd> oder „🐴 Aufsteigen“ drücken. Mit <kbd>M</kbd> wieder absteigen. <strong>Als Pferd spielen:</strong> <kbd>Q</kbd> oder „🐎 Pferd spielen“. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch-Tempo · <kbd>G</kbd> Pferdegangart · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Fohlen sind nicht reitbar.</div>',
+      ' <div><strong>Führen:</strong> Neben dein Pferd treten und <kbd>L</kbd> oder <strong>„🤝 Führen“</strong> wählen. Dein Mensch nimmt die Zügel und das Pferd läuft an seiner Seite. Nochmal drücken, um loszulassen. <strong>Aufs Pferd steigen:</strong> Im Modus „Mensch + Pferd“ neben dein Pony oder Pferd laufen und <kbd>M</kbd> oder „🐴 Aufsteigen“ drücken. Mit <kbd>M</kbd> wieder absteigen. <strong>Als Pferd spielen:</strong> <kbd>Q</kbd> oder „🐎 Pferd spielen“. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> bewegen · <kbd>R</kbd> Mensch-Tempo · <kbd>G</kbd> Pferdegangart · <kbd>E</kbd> interagieren · <kbd>T</kbd> verwandeln · <kbd>Leertaste</kbd> springen. Fohlen sind nicht reitbar.</div>',
       ' <div class="pz-more"><button data-act="follow">🐴 Begleiter: Folgen</button><button data-act="restart">↻ Neu beginnen</button></div>',
       ' <p class="pz-note">Dies ist eine erste spielbare Vorschau, noch kein fertiges Star-Stable-ähnliches Spiel. Aktuell werden weder Konten noch Online-Spielstände angelegt.</p></div>',
       '</div>',
@@ -181,7 +220,7 @@
     const breedText = shell.querySelector('[data-breed]');
     const selectionText = shell.querySelector('[data-selection]');
     const keys = new Set();
-    let selectedMode = 'duo', selectedHorseId = DEFAULT_HORSE;
+    let selectedMode = 'duo', selectedHorseId = DEFAULT_HORSE, selectedOutfitId='helmet';
     let state = newState('duo'), started = false, alive = true, raf = 0, last = 0, noticeUntil = 0;
     let cameraYaw = 0.18, camX = 0, camZ = 0, dragging = null;
     const questTitle=shell.querySelector('[data-quest-title]'), questText=shell.querySelector('[data-quest-text]');
@@ -189,6 +228,7 @@
     const interactButton=shell.querySelector('[data-act="interact"]');
     const roleButton=shell.querySelector('.pz-role-switch');
     const mountButton=shell.querySelector('.pz-mount-switch');
+    const leadButton=shell.querySelector('.pz-lead-switch');
     const paceButton=shell.querySelector('[data-act="pace"]');
     const gaitButton=shell.querySelector('[data-act="gait"]');
     const PI = Math.PI;
@@ -198,7 +238,7 @@
       noticeUntil = performance.now() + 3800;
     }
     function reset(mode) {
-      state = newState(mode, selectedHorseId);
+      state = newState(mode, selectedHorseId, selectedOutfitId);
       ambientLastUpdate=0;
       cameraYaw = 0.18; camX = state.player.x; camZ = state.player.z;
       started = true; entry.hidden = true;
@@ -232,6 +272,10 @@
       roleButton.hidden = state.mode !== 'duo' || !started || state.mounted;
       roleButton.textContent = switchLabel(state);
       mountButton.hidden = state.mode !== 'duo' || !started;
+      leadButton.hidden = state.mode !== 'duo' || !started;
+      leadButton.textContent = state.leading?'✋ Zügel loslassen':'🤝 Führen';
+      leadButton.setAttribute('aria-pressed',String(state.leading));
+      leadButton.disabled = state.mounted || state.player.form !== 'human' || state.active !== 'player' && !state.leading;
       const unrideable=horseById(state.companion.horseId).foal;
       mountButton.disabled = !state.mounted && (unrideable || state.player.form !== 'human');
       mountButton.textContent = state.mounted ? '↧ Absteigen' : unrideable ? '🐣 Fohlen nicht reitbar' : '🐴 Aufsteigen';
@@ -266,7 +310,20 @@
       if (act === 'pace') { if (cycleHumanPace(state)) hint('Mensch-Tempo: ' + HUMAN_PACES[state.humanPace].label); }
       if (act === 'transform') { if (transform(state)) hint(state.player.form === 'horse' ? 'Du bist jetzt ein Zauberpferd! ✨' : 'Zurückverwandelt: Du bist wieder Mensch!'); else if(state.mounted)hint('Steige zuerst mit M vom Pferd ab.'); }
       if (act === 'gait' && controlled(state).form === 'horse') { state.gait = (state.gait + 1) % 3; hint('Pferde-Gangart: ' + ['Schritt','Trab','Galopp'][state.gait]); }
-      if (act === 'follow') { state.following = !state.following; hint(state.following ? 'Dein Begleiter folgt dir.' : 'Dein Begleiter wartet.'); }
+      if (act === 'lead') {
+        const result=toggleLead(state);
+        hint({leading:'🤝 Du hältst die Zügel! Dein Pferd geht direkt neben dir. Mit L lässt du los.',
+          released:'Du hast die Zügel losgelassen. Dein Pferd wartet neben dir.',
+          tooFar:'Gehe bis dicht neben dein Pferd, um die Zügel zu nehmen.',
+          mounted:'Steige erst vom Pferd ab, um es zu führen.',
+          needHuman:'Steuere deinen Menschen, um das Pferd zu führen.',
+          horseOnly:'Im Nur-Pferd-Modus spielst du selbst das Pferd.'}[result]);
+      }
+      if (act === 'follow') {
+        if(state.leading)state.leading=false;
+        state.following = !state.following;
+        hint(state.following ? 'Dein Begleiter folgt dir frei.' : 'Dein Begleiter wartet.');
+      }
       if (act === 'jump') {
         const ent = state.active === 'player' ? state.player : state.companion;
         if (ent.jump <= 0) ent.jump = 0.001;
@@ -278,12 +335,18 @@
         button.setAttribute('aria-pressed', String(button.dataset.mode === selectedMode)));
       shell.querySelectorAll('[data-horse]').forEach(button =>
         button.setAttribute('aria-pressed', String(button.dataset.horse === selectedHorseId)));
+      shell.querySelectorAll('[data-outfit]').forEach(button =>
+        button.setAttribute('aria-pressed', String(button.dataset.outfit === selectedOutfitId)));
       const chosen = horseById(selectedHorseId);
       selectionText.textContent = chosen.name + ' · ' + chosen.detail + (chosen.foal ? ' · Nicht reitbar' : '');
     }
     function onClick(event) {
       const mode = event.target.closest('[data-mode]');
       if (mode && MODES.includes(mode.dataset.mode)) { selectedMode = mode.dataset.mode; updateSelection(); return; }
+      const outfit = event.target.closest('[data-outfit]');
+      if (outfit && Object.prototype.hasOwnProperty.call(OUTFIT_MAP,outfit.dataset.outfit)) {
+        selectedOutfitId=outfit.dataset.outfit;updateSelection();return;
+      }
       const horse = event.target.closest('[data-horse]');
       if (horse && Object.prototype.hasOwnProperty.call(HORSES,horse.dataset.horse)) { selectedHorseId = horse.dataset.horse; updateSelection(); return; }
       if (event.target.closest('[data-start]')) { reset(selectedMode); return; }
@@ -295,13 +358,14 @@
     function onKeyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey || !alive || !started || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
       const key = e.key.toLowerCase();
-      if (keyMap[key] || ['q','t','g','f','e','r','m',' '].includes(key)) e.preventDefault();
+      if (keyMap[key] || ['q','t','g','f','e','r','m','l',' '].includes(key)) e.preventDefault();
       if (keyMap[key]) keys.add(keyMap[key]);
       if (e.repeat) return;
       if (key === 'e') action('interact');
       if (key === 'q') action('switch');
       if (key === 'r') action('pace');
       if (key === 'm') action('mount');
+      if (key === 'l') action('lead');
       if (key === 't') action('transform');
       if (key === 'g') action('gait');
       if (key === 'f') action('follow');
@@ -422,12 +486,21 @@
       box(m,0,-.23,0,73,.46,73,green);
       for(let j=-11;j<=11;j++) {
         const z=j*2.7,x=Math.sin(j*.24)*2.3;
-        box(m,x,-.008,z,5.3,.045,3.05,[.78,.70,.51],Math.sin(j*.24)*.1);
+        // Rounded, gently overlapping track pieces instead of square slabs.
+        ellipsoid(m,x,-.013,z,2.8,.038,2.05,[.76,.70,.54],Math.sin(j*.24)*.1);
+        ellipsoid(m,x-.8,-.005,z,1.22,.024,1.20,[.79,.73,.56]);
       }
       // Hills and mountains at the edge of the meadow.
       for (let i=0;i<15;i++) {
         const a=i*2*PI/15, x=Math.sin(a)*37,z=Math.cos(a)*37;
         ellipsoid(m,x,.4,z,12,2.7+(i%4),8,i%2?[.37,.62,.48]:[.44,.68,.48]);
+      }
+      // Rounded rolling embankments towards the edges, away from quest objects.
+      for(let i=0;i<20;i++) {
+        const a=i*2*Math.PI/20,rad=31.5+(i%3)*.85;
+        const x=Math.sin(a)*rad,z=Math.cos(a)*rad;
+        ellipsoid(m,x,-.36,z,4.7,1.55+(i%4)*.28,4.6,
+          i%3?[.45,.69,.46]:[.43,.67,.40]);
       }
       // Trees, carefully kept away from the road and spawn.
       for(let i=0;i<64;i++) {
@@ -435,8 +508,11 @@
         if(Math.abs(x)<6 || (x>9&&x<19&&z>-15&&z<-5) || (x<-8&&z>8&&z<19))continue;
         const h=2.3+(i%5)*.45;
         box(m,x,h*.34,z,.32,h*.68,.32,[.43,.32,.22]);
-        cone(m,x,h*.47,z,1.25,h*.65,i%3===0?[.19,.49,.40]:[.23,.53,.37]);
-        cone(m,x,h*.8,z,.97,h*.58,i%3===0?[.23,.59,.44]:[.27,.63,.43]);
+        // Rounded clusters of foliage instead of needle-like angular cones.
+        const leaf=i%3===0?[.22,.52,.38]:[.30,.59,.40];
+        ellipsoid(m,x,h*.72,z,1.18,h*.35,1.05,leaf);
+        ellipsoid(m,x-.43,h*.80,z+.25,.86,h*.28,.77,[.25,.60,.43]);
+        ellipsoid(m,x+.39,h*.93,z-.27,.74,h*.27,.81,[.30,.64,.45]);
       }
       // Stable with roof, doorway, windows and paddock.
       box(m,-14,2,14,8,4,6,[.73,.37,.34]);
@@ -451,13 +527,31 @@
       box(m,16,1.8,14,5.2,3.6,5.3,[.89,.79,.63]);
       cone(m,16,3.65,14,3.8,2.25,[.61,.36,.38],4);
       box(m,16,1.2,11.25,1.2,2.4,.12,[.41,.54,.54]);
-      ellipsoid(m,14.7,-.03,-11,5.8,.075,3.8,[.43,.75,.81]);
+      ellipsoid(m,14.7,-.038,-11,6.25,.052,4.35,[.79,.74,.57]); // soft shore
+      ellipsoid(m,14.7,-.018,-11,5.8,.075,3.8,[.43,.75,.81]);
+      // Reed beds and gentle stones around the pond's irregular shore.
+      for(let i=0;i<27;i++) {
+        const a=i*2*Math.PI/27,r=1+.09*Math.sin(i*3);
+        const x=14.7+Math.cos(a)*6.15*r,z=-11+Math.sin(a)*4.3*r;
+        if(i%4===0)ellipsoid(m,x,.16,z,.37,.16,.27,[.66,.68,.60]);
+        else {
+          box(m,x,.38,z,.075,.76,.073,[.29,.51,.34],Math.sin(i*.7)*.15);
+          ellipsoid(m,x,.77,z,.10,.19,.10,[.60,.45,.31]);
+        }
+      }
       for(let i=0;i<65;i++) {
         const x=(((i*23+8)%65)-32),z=(((i*13+9)%61)-30);
         if(Math.abs(x)<3.3 || (x>7&&x<21&&z< -5&&z>-17))continue;
         const c=i%3===0?[.96,.82,.52]:i%3===1?[.97,.66,.77]:[.96,.96,.89];
         box(m,x,.12,z,.045,.24,.045,[.31,.58,.32]);
         ellipsoid(m,x,.26,z,.15,.11,.15,c);
+      }
+      // Low, rounded patches of meadow and native wildflowers.
+      for(let i=0;i<37;i++) {
+        const x=-29+(i*23)%58,z=-29+(i*37)%57;
+        if(Math.abs(x)<5||Math.hypot(x-14.7,z+11)<7)continue;
+        ellipsoid(m,x,.015,z,.7+(i%3)*.24,.027,.50+(i%4)*.18,
+          i%2?[.46,.70,.45]:[.39,.64,.37]);
       }
       // Stable yard: hay stacks, troughs, shrub beds and logs.
       for(let i=0;i<17;i++){
@@ -499,6 +593,54 @@
       const v=local(p,lx,y,lz),scale=p.horseScale||1;
       ellipsoid(m,v[0],v[1],v[2],rx*scale,ry*scale,rz*scale,c,p.heading);
     }
+    // A short, rounded 3D rope connects the hand to the bridle. This is real
+    // geometry within the same WebGL scene rather than a floating screen line.
+    function cord(m,a,b,radius,color) {
+      const dir=b.map((v,i)=>v-a[i]),len=Math.hypot(...dir);
+      if(len<.001)return;
+      const axis=dir.map(v=>v/len),base=Math.abs(axis[1])<.92?[0,1,0]:[1,0,0];
+      const u=[base[1]*axis[2]-base[2]*axis[1],base[2]*axis[0]-base[0]*axis[2],base[0]*axis[1]-base[1]*axis[0]];
+      const ul=Math.hypot(...u)||1;u.forEach((v,i)=>u[i]=v/ul);
+      const v=[axis[1]*u[2]-axis[2]*u[1],axis[2]*u[0]-axis[0]*u[2],axis[0]*u[1]-axis[1]*u[0]];
+      for(let i=0;i<7;i++){
+        const angle=i*2*Math.PI/7,next=(i+1)*2*Math.PI/7;
+        const offset=a=>u.map((q,j)=>radius*(q*Math.cos(a)+v[j]*Math.sin(a)));
+        const n0=offset(angle),n1=offset(next);
+        const point=(p,n)=>p.map((q,j)=>q+n[j]);
+        const p0=point(a,n0),p1=point(a,n1),p2=point(b,n0),p3=point(b,n1);
+        tri(m,p0,p1,p2,n0.map(q=>q/radius),color);
+        tri(m,p1,p3,p2,n1.map(q=>q/radius),color);
+      }
+    }
+    function hat(m,pose,y,type) {
+      const dark=[.18,.21,.25];
+      if(type==='helmet') {
+        blob(m,pose,0,y-.04,-.06,.34,.23,.33,dark);
+        blob(m,pose,0,y-.17,.16,.32,.06,.25,[.12,.14,.19]);
+        for(const side of [-1,1])limb(m,pose,side*.24,y-.36,.08,.037,.28,.035,[.29,.23,.21]);
+      } else if(type==='cowboy') {
+        blob(m,pose,0,y-.07,-.03,.43,.065,.40,[.47,.32,.20]);
+        blob(m,pose,0,y+.10,-.08,.27,.23,.27,[.49,.34,.22]);
+        blob(m,pose,0,y+.13,-.02,.27,.04,.29,[.82,.66,.43]);
+      } else {
+        blob(m,pose,0,y-.03,-.08,.33,.18,.31,[.27,.43,.57]);
+        blob(m,pose,0,y-.15,.20,.28,.04,.21,[.22,.36,.49]);
+      }
+    }
+    function leadRope(m) {
+      const h=state.companion,p=state.player;
+      const profile=horseById(h.horseId);
+      const handY=1.05+(p.jump>0?Math.sin(p.jump*PI/.78)*.75:0);
+      const humanHand=local(p,.42,handY,.48);
+      const hPose={...h,horseScale:profile.size};
+      const base=Math.sin(h.walk*9)*.035+(h.jump>0?Math.sin(h.jump*PI/.78)*.8:0);
+      const bit=local(hPose,.12,(profile.foal?1.60:1.68)+base,profile.foal?1.38:1.34);
+      const middle=humanHand.map((q,i)=>(q+bit[i])/2);
+      middle[1]-=.16;
+      cord(m,humanHand,middle,.027,[.33,.21,.14]);
+      cord(m,middle,bit,.027,[.33,.21,.14]);
+      blob(m,p,.42,handY,.48,.09,.09,.09,[.91,.71,.56]);
+    }
     function horse(m,p,t,isCompanion) {
       const breed=horseById(p.horseId);
       const fur=breed.coat;
@@ -522,8 +664,19 @@
         limb(m,pose,side*.37,.105+lift,z+pace,.25,.21,.33,[.32,.33,.34]);
       }
       blob(m,pose,0,1.08+base,-1.02,.17,.25,.55,breed.mane);
-      // Tack stays attached to the personal companion; wild herds and foals
-      // are untacked. Cloth, saddle seat, girth and stirrups are 3D meshes.
+      // Companion foals wear a leading halter, never a saddle or bit.
+      if(isCompanion && breed.foal) {
+        const leather=[.31,.19,.14];
+        for(const side of [-1,1]) {
+          limb(m,pose,side*.28,1.92+base,1.12,.06,.48,.07,leather);
+          limb(m,pose,side*.28,2.06+base,.94,.06,.36,.07,leather);
+        }
+        limb(m,pose,0,2.20+base,.92,.62,.07,.07,leather);
+        limb(m,pose,0,1.70+base,1.38,.63,.08,.08,leather);
+        limb(m,pose,0,1.59+base,1.38,.56,.06,.07,leather);
+        blob(m,pose,.12,1.60+base,1.38,.07,.07,.07,[.85,.70,.39]);
+      }
+      // Riding tack stays attached to adult companions; wild herds are untacked.
       if(isCompanion && !breed.foal) {
         const leather=[.31,.19,.14],gold=[.85,.70,.39];
         blob(m,pose,0,1.79+base,-.16,.58,.12,.63,[.28,.46,.62]); // saddle cloth
@@ -545,15 +698,22 @@
     function human(m,p) {
       const moving=Math.sin(p.walk*9),lift=p.jump>0?Math.sin(p.jump*PI/.78)*.75:0;
       const shirts=[[.28,.59,.55],[.76,.47,.48],[.36,.49,.73],[.79,.67,.42]];
-      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:p.style===undefined?[.59,.44,.70]:shirts[p.style%shirts.length],jeans=[.34,.49,.62];
+      const selection=p.outfitId ? outfitById(p.outfitId) : p===KEEPER ? OUTFITS[1] : OUTFITS[(p.style||0)%OUTFITS.length];
+      const skin=[.91,.71,.56],shirt=p===KEEPER?[.22,.53,.43]:p.style===undefined?selection.shirt:shirts[p.style%shirts.length],jeans=selection.pants;
       limb(m,p,0,1.26+lift,0,.62,.78,.37,shirt);
       blob(m,p,0,1.91+lift,.01,.29,.33,.27,skin);
       blob(m,p,0,2.15+lift,-.07,.32,.20,.31,[.36,.25,.22]);
+      hat(m,p,2.32+lift,selection.hat);
+      // Jacket front, boot cuffs and contrasting shirt buttons.
+      for(let i=0;i<3;i++)blob(m,p,.02,1.52+lift-i*.17,.19,.035,.028,.032,[.88,.79,.62]);
       for(const side of [-1,1]){
         const k=side*moving*.12;
         limb(m,p,side*.19,.43+lift,k,.23,.82,.27,jeans);
         limb(m,p,side*.19,.09+lift,k+.12,.27,.18,.39,[.31,.33,.37]);
-        limb(m,p,side*.43,1.20+lift,-k,.18,.76,.22,skin);
+        limb(m,p,side*.43,1.20+lift,-k,.19,.76,.22,shirt);
+        blob(m,p,side*.19,.24+lift,k,.145,.16,.17,[.19,.23,.26]); // riding boots
+        if(state.leading&&p===state.player&&side===1)
+          limb(m,p,side*.42,1.17+lift,.28,.18,.43,.23,skin);
       }
     }
     function rider(m,p,t) {
@@ -562,11 +722,13 @@
       const bob=Math.sin(p.walk*9)*.035*horseScale;
       const jump=p.jump>0?Math.sin(p.jump*PI/.78)*.8*horseScale:0;
       const hips=horseScale*2.03+bob+jump,pose={x:p.x,z:p.z,heading:p.heading};
-      const shirt=[.59,.44,.70],skin=[.91,.71,.56],jeans=[.30,.43,.62];
+      const outfit=outfitById(state.player.outfitId);
+      const shirt=outfit.shirt,skin=[.91,.71,.56],jeans=outfit.pants;
       blob(m,pose,0,hips,-.22,.35,.21,.30,jeans); // hips resting on seat
       limb(m,pose,0,hips+.54,-.08,.56,.87,.34,shirt);
       blob(m,pose,0,hips+1.20,.02,.27,.30,.26,skin);
       blob(m,pose,0,hips+1.46,-.06,.29,.17,.29,[.32,.23,.22]);
+      hat(m,pose,hips+1.62,outfit.hat);
       for(const side of [-1,1]) {
         // Bent legs lie on opposite sides of the horse's body, feet in stirrups.
         limb(m,pose,side*.39,hips-.27,-.03,.24,.67,.29,jeans);
@@ -644,6 +806,7 @@
         if(p.form==='human')human(m,p);else horse(m,p,t,p===state.companion);
       }
       if(state.mounted)rider(m,state.companion,t);
+      if(state.leading)leadRope(m);
       human(m,KEEPER);
       if(state.quest!=='meet' && state.quest!=='trail') {
         const foal=state.quest==='escort'||state.quest==='foal'?state.foal:{...state.foal,x:-12,z:7};
@@ -717,7 +880,8 @@
         move(entity,dx,dz,movementSpeed(state),dt);
       }
       if(entity.jump>0){entity.jump+=dt;if(entity.jump>=.78)entity.jump=0;}
-      if(state.mode==='duo'&&state.following) {
+      if(state.leading)advanceLead(state,dt);
+      if(state.mode==='duo'&&state.following&&!state.leading) {
         const other=state.active==='player'?state.companion:state.player;
         const dx=entity.x-other.x,dz=entity.z-other.z,dist=Math.hypot(dx,dz);
         if(dist>2.5)move(other,dx,dz,Math.min(5,2.6+(dist-2.5)*.65),dt);
