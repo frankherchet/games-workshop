@@ -310,6 +310,20 @@ test('a nearby human can mount an adult horse and dismount beside it', () => {
   assert.ok(Math.hypot(state.player.x-horse.x,state.player.z-horse.z)<2);
 });
 
+test('dismounting mid-jump with M or Q leaves both figures on the ground', () => {
+  for (const dismount of [logic.mountOrDismount, logic.switchTarget]) {
+    const state=logic.newState('duo','haflinger');
+    assert.equal(logic.mountOrDismount(state),'mounted');
+    state.companion.jump=.3;
+    state.player.jump=.3;
+    dismount(state);
+    assert.equal(state.mounted,false);
+    assert.equal(state.active,'player');
+    assert.equal(state.player.jump,0);
+    assert.equal(state.companion.jump,0);
+  }
+});
+
 test('mounting requires the human to be within reach of their horse', () => {
   const state=logic.newState('duo','haflinger');
   state.companion.x=24;state.companion.z=26;
