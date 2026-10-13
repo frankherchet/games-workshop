@@ -485,12 +485,21 @@
       box(m,0,-.23,0,73,.46,73,green);
       for(let j=-11;j<=11;j++) {
         const z=j*2.7,x=Math.sin(j*.24)*2.3;
-        box(m,x,-.008,z,5.3,.045,3.05,[.78,.70,.51],Math.sin(j*.24)*.1);
+        // Rounded, gently overlapping track pieces instead of square slabs.
+        ellipsoid(m,x,-.013,z,2.8,.038,2.05,[.76,.70,.54],Math.sin(j*.24)*.1);
+        ellipsoid(m,x-.8,-.005,z,1.22,.024,1.20,[.79,.73,.56]);
       }
       // Hills and mountains at the edge of the meadow.
       for (let i=0;i<15;i++) {
         const a=i*2*PI/15, x=Math.sin(a)*37,z=Math.cos(a)*37;
         ellipsoid(m,x,.4,z,12,2.7+(i%4),8,i%2?[.37,.62,.48]:[.44,.68,.48]);
+      }
+      // Rounded rolling embankments towards the edges, away from quest objects.
+      for(let i=0;i<20;i++) {
+        const a=i*2*Math.PI/20,rad=31.5+(i%3)*.85;
+        const x=Math.sin(a)*rad,z=Math.cos(a)*rad;
+        ellipsoid(m,x,-.36,z,4.7,1.55+(i%4)*.28,4.6,
+          i%3?[.45,.69,.46]:[.43,.67,.40]);
       }
       // Trees, carefully kept away from the road and spawn.
       for(let i=0;i<64;i++) {
@@ -498,8 +507,11 @@
         if(Math.abs(x)<6 || (x>9&&x<19&&z>-15&&z<-5) || (x<-8&&z>8&&z<19))continue;
         const h=2.3+(i%5)*.45;
         box(m,x,h*.34,z,.32,h*.68,.32,[.43,.32,.22]);
-        cone(m,x,h*.47,z,1.25,h*.65,i%3===0?[.19,.49,.40]:[.23,.53,.37]);
-        cone(m,x,h*.8,z,.97,h*.58,i%3===0?[.23,.59,.44]:[.27,.63,.43]);
+        // Rounded clusters of foliage instead of needle-like angular cones.
+        const leaf=i%3===0?[.22,.52,.38]:[.30,.59,.40];
+        ellipsoid(m,x,h*.72,z,1.18,h*.35,1.05,leaf);
+        ellipsoid(m,x-.43,h*.80,z+.25,.86,h*.28,.77,[.25,.60,.43]);
+        ellipsoid(m,x+.39,h*.93,z-.27,.74,h*.27,.81,[.30,.64,.45]);
       }
       // Stable with roof, doorway, windows and paddock.
       box(m,-14,2,14,8,4,6,[.73,.37,.34]);
@@ -514,13 +526,31 @@
       box(m,16,1.8,14,5.2,3.6,5.3,[.89,.79,.63]);
       cone(m,16,3.65,14,3.8,2.25,[.61,.36,.38],4);
       box(m,16,1.2,11.25,1.2,2.4,.12,[.41,.54,.54]);
-      ellipsoid(m,14.7,-.03,-11,5.8,.075,3.8,[.43,.75,.81]);
+      ellipsoid(m,14.7,-.038,-11,6.25,.052,4.35,[.79,.74,.57]); // soft shore
+      ellipsoid(m,14.7,-.018,-11,5.8,.075,3.8,[.43,.75,.81]);
+      // Reed beds and gentle stones around the pond's irregular shore.
+      for(let i=0;i<27;i++) {
+        const a=i*2*Math.PI/27,r=1+.09*Math.sin(i*3);
+        const x=14.7+Math.cos(a)*6.15*r,z=-11+Math.sin(a)*4.3*r;
+        if(i%4===0)ellipsoid(m,x,.16,z,.37,.16,.27,[.66,.68,.60]);
+        else {
+          box(m,x,.38,z,.075,.76,.073,[.29,.51,.34],Math.sin(i*.7)*.15);
+          ellipsoid(m,x,.77,z,.10,.19,.10,[.60,.45,.31]);
+        }
+      }
       for(let i=0;i<65;i++) {
         const x=(((i*23+8)%65)-32),z=(((i*13+9)%61)-30);
         if(Math.abs(x)<3.3 || (x>7&&x<21&&z< -5&&z>-17))continue;
         const c=i%3===0?[.96,.82,.52]:i%3===1?[.97,.66,.77]:[.96,.96,.89];
         box(m,x,.12,z,.045,.24,.045,[.31,.58,.32]);
         ellipsoid(m,x,.26,z,.15,.11,.15,c);
+      }
+      // Low, rounded patches of meadow and native wildflowers.
+      for(let i=0;i<37;i++) {
+        const x=-29+(i*23)%58,z=-29+(i*37)%57;
+        if(Math.abs(x)<5||Math.hypot(x-14.7,z+11)<7)continue;
+        ellipsoid(m,x,.015,z,.7+(i%3)*.24,.027,.50+(i%4)*.18,
+          i%2?[.46,.70,.45]:[.39,.64,.37]);
       }
       // Stable yard: hay stacks, troughs, shrub beds and logs.
       for(let i=0;i<17;i++){
