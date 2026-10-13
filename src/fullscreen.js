@@ -47,6 +47,13 @@
       }
     }
     const controller={enter,exit:leave,toggle(){active?leave():enter();},get active(){return active;},dispose(){leave();disposed=true;observer?.disconnect();listeners.forEach(fn=>fn());}};
+    const report=doc.createElement?.('button');
+    if(report&&doc.getElementById?.('feedback-open')){
+      report.type='button';report.className='button small secondary';report.textContent='Bug / Wunsch';
+      button.parentNode.append(report);
+      listen(report,'click',()=>{controller.exit();doc.getElementById('feedback-open').click();});
+      listeners.push(()=>report.remove());
+    }
     listen(button,'click',()=>controller.toggle());
     listen(win,'resize',schedule);listen(win,'orientationchange',schedule);listen(win.visualViewport,'resize',schedule);
     const change=()=>{if(nativeElement()===element){native=true;schedule();}else if(native&&active)leave();};

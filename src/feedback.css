@@ -1,0 +1,17 @@
+.feedback-trigger{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:30;min-height:44px;padding:10px 16px;font-size:13px}
+.game-is-fullscreen .feedback-trigger{display:none}
+#feedback{max-height:90dvh;overflow:auto;padding:24px;width:min(540px,calc(100vw - 32px))}
+#feedback h2{font-size:24px;text-wrap:balance}
+#feedback form{display:grid;gap:18px;margin-top:20px}
+#feedback label{display:grid;gap:8px;font-size:14px;font-weight:600}
+#feedback select,#feedback textarea{width:100%;min-width:0;min-height:44px;padding:10px;background:var(--bg);color:var(--text);border:1px solid var(--line);font:inherit}
+#feedback textarea{resize:vertical;font-weight:400}
+#feedback select:focus-visible,#feedback textarea:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+#feedback p{margin:0;font-size:13px}
+#feedback summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:44px;display:flex;align-items:center}
+#feedback summary::before{content:"▸";margin-right:8px;color:var(--mint)}
+#feedback details[open] summary::before{content:"▾"}
+#feedback pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:var(--muted);max-height:180px;overflow:auto}
+.feedback-actions{display:flex;gap:12px;flex-wrap:wrap}
+#feedback-send:disabled{opacity:.65}
+.footer{padding-bottom:90px}
