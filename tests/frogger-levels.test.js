@@ -9,11 +9,11 @@ function solve(level){
     for(const s of states)for(const [dx,dy]of [[0,1],[1,0],[-1,0],[0,-1],[0,0]]){
       const n={...s,player:{...s.player},collected:[...s.collected]};
       if(dx||dy)M.move(n,dx,dy);
-      if(n.status==='won')return n;
+      if(n.status==='won'&&n.collected.length===3)return n;
       M.step(n,.2);
-      if(n.status==='won')return n;
+      if(n.status==='won'&&n.collected.length===3)return n;
       if(n.status!=='playing')continue;
-      const key=`${Math.round(n.player.x*10)},${n.player.y},${n.rescued},${n.portalLock}`;
+      const key=`${Math.round(n.player.x*10)},${n.player.y},${n.rescued},${n.portalLock},${n.collected.reduce((mask,i)=>mask|(1<<i),0)}`;
       if(!next.has(key))next.set(key,n);
     }
     states=[...next.values()];
@@ -30,6 +30,7 @@ test('level identifiers, boundaries, pickups and rescue positions are valid',()=
     for(const f of [...l.flies,...(l.friend?[l.friend]:[])]){
       assert.ok(Number.isInteger(f.x)&&f.x>=0&&f.x<D.WIDTH);assert.ok(f.y>=0&&f.y<l.rows.length);
       assert.equal(l.rows[f.y].kind,'safe','Pickups and rescue have a safe waiting surface');
+      assert.ok(!l.rows[f.y].blocked?.includes(f.x));
     }
     for(const q of l.portals||[]){
       assert.equal(l.portals.filter(p=>p.label===q.label).length,2);
@@ -37,6 +38,6 @@ test('level identifiers, boundaries, pickups and rescue positions are valid',()=
     }
   }
 });
-for(const l of D.levels)test(`${l.id} ${l.name}: timed route including required rescue exists`,()=>{
-  const won=solve(l);assert.ok(won,`No route found for ${l.id}`);assert.equal(won.status,'won');assert.ok(!l.friend||won.rescued);
+for(const l of D.levels)test(`${l.id} ${l.name}: timed route with all fireflies and required rescue exists`,()=>{
+  const won=solve(l);assert.ok(won,`No route found for ${l.id}`);assert.equal(won.status,'won');assert.equal(won.collected.length,3);assert.ok(!l.friend||won.rescued);
 });

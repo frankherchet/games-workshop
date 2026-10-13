@@ -29,6 +29,7 @@
     return result;
   }
   function support(row,x,time) {
+    if(row.blocked?.includes(Math.round(x)))return false;
     if(row.kind==='safe'||row.kind==='ice')return true;
     if(row.kind==='sink'&&!phase(row,time).active)return false;
     return objects(row,time).find(o=>!o.danger&&x>=o.x+.05&&x<=o.x+o.w-.05);
@@ -62,20 +63,19 @@
   function move(s,dx,dy) {
     if(s.status!=='playing'||s.cooldown>1e-8||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;
     const p=s.player,x=Math.round(p.x)+dx,y=p.y+dy;
-    if(x<0||x>=D.WIDTH||y<0||y>=s.level.rows.length)return false;
+    if(x<0||x>=D.WIDTH||y<0||y>=s.level.rows.length||s.level.rows[y].blocked?.includes(x))return false;
     p.x=x;p.y=y;s.direction={x:dx,y:dy};s.cooldown=HOP;s.hop=HOP;s.reason='';
     resolve(s);
     if(s.status==='playing'&&s.level.rows[p.y].kind==='ice'){
       const x=p.x+dx,y=p.y+dy;
-      if(x>=0&&x<D.WIDTH&&y>=0&&y<s.level.rows.length){p.x=x;p.y=y;resolve(s);}
+      if(x>=0&&x<D.WIDTH&&y>=0&&y<s.level.rows.length&&!s.level.rows[y].blocked?.includes(x)){p.x=x;p.y=y;resolve(s);}
     }
     if(s.status==='playing')teleport(s);
     return true;
   }
   function step(s,dt) {
     if(!Number.isFinite(dt)||dt<0||s.status!=='playing')return;
-    // Cap frame catch-up: background time must never run an unseen attempt.
-    let left=Math.min(dt,.25);
+    let left=dt;
     while(left>1e-8&&s.status==='playing'){
       const slice=Math.min(STEP,left),row=s.level.rows[s.player.y],old=s.time;
       const rides=row.kind==='water'&&support(row,s.player.x,old);

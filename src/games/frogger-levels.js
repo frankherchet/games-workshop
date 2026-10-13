@@ -8,7 +8,7 @@
     {name:'Polarlichter', color:'#a6dcff', water:'#23496c', ground:'#3b5667'},
     {name:'Orbitalgarten', color:'#c1a5ff', water:'#343052', ground:'#302c4a'}
   ];
-  const safe = () => ({kind:'safe'});
+  const safe = (options={}) => ({kind:'safe',...options});
   const road = (speed=1.2, style='bike', options={}) => ({kind:'road',speed,width:1.1,offsets:[0,4.5,9],style,...options});
   const water = (speed=.65, options={}) => ({kind:'water',speed,width:2.6,offsets:[0,4.4,8.8],style:'log',...options});
   const levels=[];
@@ -34,7 +34,7 @@
   add(1,'Feierabendspur',[city(1.1),safe(),city(-1.6),safe()]);
   add(1,'Straßenbahn',[city(.9,{signal:true}),safe(),tram(),safe()],{hint:'ACHTUNG kündigt die Bahn an. Warte vor dem Gleis auf der Insel.'});
   add(1,'Hafentaxi',[safe(),boat(.6),boat(-.75),safe()]);
-  add(1,'Marktgasse',[city(.9,{width:2}),safe(),city(-1.2,{signal:true}),safe(),city(1.2),safe()]);
+  add(1,'Marktgasse',[city(.9,{width:2}),safe({blocked:[0,1,6,7,8]}),city(-1.2,{signal:true}),safe({blocked:[0,1,2,7,8]}),city(1.2),safe()],{flies:[{x:3,y:2},{x:4,y:4},{x:5,y:6}],hint:'Marktstände begrenzen die Inseln. Plane die freie Gasse für deine Landung.'});
   add(1,'Zwei Kreuzungen',[city(1.2,{signal:true}),safe(),city(-1.4,{signal:true,phase:3}),safe()]);
   add(1,'Nachtfähre',[safe(),boat(.8,{dock:true,width:3.3,offsets:[0,4.4,8.8]}),safe(),boat(-.6),safe()],{hint:'Die Fähren halten drei Sekunden. ANLEGER ist dein ruhiges Einstiegsfenster.'});
   add(1,'Blaulicht',[city(1.1,{signal:true,emergency:{kind:'road',speed:3,width:1.3,offsets:[0],pulse:true,phase:3}}),safe(),city(-1.3,{signal:true,phase:2}),safe()],{hint:'Blaulicht fährt auch bei LOS. Achte auf die zusätzliche Warnung.'});
@@ -61,7 +61,7 @@
   add(3,'Schlittenweg',[ice(),safe(),sled(.9),safe(),sled(-1.2),safe()]);
   add(3,'Schollenfahrt',[safe(),floe(.6),floe(-.6),safe()]);
   add(3,'Dünnes Eis',[ice(),safe(),thin(1),safe(),ice(),safe()],{hint:'BRICHT warnt vor dem Einbruch. Treibende Schollen lösen kein Rutschen aus.'});
-  add(3,'Frostkurve',[ice(),safe(),ice(),safe(),ice(),safe()],{flies:[{x:1,y:2},{x:7,y:4},{x:4,y:6}]});
+  add(3,'Frostkurve',[ice(),safe({blocked:[0,4,5,6,7,8]}),ice(),safe({blocked:[0,1,2,3,4,8]}),ice(),safe({blocked:[0,1,2,6,7,8]})],{flies:[{x:1,y:2},{x:7,y:4},{x:4,y:6}],hint:'Die Schneefelder liegen versetzt. Richte deinen nächsten Sprung auf dem Eis seitlich aus.'});
   add(3,'Schneepflug',[sled(.7,{width:3,offsets:[0,7]}),safe(),ice(),safe(),sled(-1.4),safe()]);
   add(3,'Windfenster',[safe(),floe(.6,{wind:true}),safe(),ice(),safe(),floe(-.7),safe()],{hint:'ACHTUNG kündigt den Wind an. SCHNELL bewegt die Schollen schneller.'});
   add(3,'Wärme für zwei',[ice(),safe(),sled(1.1),safe(),thin(2),safe()],{friend:{x:7,y:4},hint:'Dein Freund wartet rechts an der Hütte hinter dem Schlittenweg.'});

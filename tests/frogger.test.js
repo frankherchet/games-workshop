@@ -90,3 +90,14 @@ test('portal on an oscillating platform has safe arrival and carries its rider',
     assert.ok(Math.abs(s.player.x-M.portalPosition(l,l.portals[1],s.time).x)<1e-8);assert.notEqual(s.player.x,arrival);
   }
 });
+test('visible slow frames advance the full active time',()=>{
+  const l=level([{kind:'water',speed:.2,width:3,offsets:[3]},{kind:'safe'}]);
+  const a=M.create(l),b=M.create(l);M.step(a,.5);for(let i=0;i<5;i++)M.step(b,.1);
+  assert.ok(Math.abs(a.time-.5)<1e-8);assert.ok(Math.abs(a.player.x-b.player.x)<1e-8);
+});
+test('market stalls block movement and snow banks force a sideways route',()=>{
+  const market=M.create(D.levels.find(l=>l.id==='2-05'));market.player={x:2,y:2};
+  assert.equal(M.move(market,-1,0),false);assert.equal(market.player.x,2);
+  const ice=M.create(D.levels.find(l=>l.id==='4-06'));M.move(ice,0,1);assert.equal(ice.player.y,1);
+  M.step(ice,.2);assert.equal(M.move(ice,0,1),false);
+});
