@@ -53,6 +53,6 @@ Die veröffentlichten Issues enthalten Ziel, Umfang, Voraussetzungen, Given/When
 | M3 | `640d8b7` | Zwanzig Karten, Phasen, Fähren und Strömung; Grenzkorrektur im Folgecommit, Hafen/Dschungel visuell geprüft |
 | M4 | `5373621` | Zwanzig Karten, Eis/Portale; sichere bewegliche Ankunft und Eisroute im Browser geprüft |
 | M5 | `43abf18` | Routenvarianten und Lifecycle abgesichert; Hoch-/Querformat, Wischen, Touch-Buttons, Fokus und Vollbild geprüft |
-| M6 | Abschließender Prüfstand | 137 Node-Tests, neun Python-Tests, Build/Check; alle 50 Karten mit drei Glühwürmchen und Rettung lösbar. Echte Geräte offen. |
+| M6 | Abschließender Prüfstand | 138 Node-Tests, neun Python-Tests, Build/Check; alle 50 Karten mit drei Glühwürmchen und Rettung lösbar. Echte Geräte offen. |
 
 Die aktuelle Zeichnung ist eine prozedurale Interpretation der Neon-Referenz. Menschliche Balanceprüfung, reale Geräte, mehrere Browser-Engines und Geräte-Performance sind noch offen. Details und Browsernachweise stehen im [Prüfstand](frogger.md#implementierungs--und-prüfstand). Keine neuen Abhängigkeiten; keine Veröffentlichung.

@@ -17,9 +17,10 @@ class Target{
   count(){return [...this.listeners.values()].reduce((n,s)=>n+s.size,0);}
 }
 function environment({blocked=false,raw=null}={}){
-  const host=new Target(),doc=new Target(),win=new Target(),canvas=new Target(),overlay=new Target(),status=new Target(),nodes=new Map(),queue=new Map(),stored=new Map();
+  const host=new Target(),doc=new Target(),win=new Target(),canvas=new Target(),overlay=new Target(),status=new Target(),info=new Target(),nodes=new Map(),queue=new Map(),stored=new Map();
   let id=0,clock=0,drawn=null,fullscreenDisposed=false;
   canvas.getContext=()=>({});canvas.setPointerCapture=()=>{};
+  doc.querySelector=()=>info;
   nodes.set('canvas',canvas);nodes.set('.fg-overlay',overlay);nodes.set('.fg-status',status);
   host.querySelector=selector=>{if(!nodes.has(selector))nodes.set(selector,new Target());return nodes.get(selector);};
   if(raw!==null)stored.set('cs-games:frogger:v1',raw);
@@ -27,7 +28,7 @@ function environment({blocked=false,raw=null}={}){
   vm.runInNewContext(fs.readFileSync('src/games/frogger-game.js','utf8'),context);
   const game=context.Arcade.games.frogger({host});
   function click(dataset){host.emit('click',{target:{closest:()=>({dataset,disabled:false})}});}
-  return {game,host,doc,win,canvas,overlay,status,stored,queue,click,get drawn(){return drawn;},get fullscreenDisposed(){return fullscreenDisposed;},tick(dt){clock+=dt*1000;const pending=[...queue.values()];queue.clear();pending.forEach(fn=>fn(clock));}};
+  return {game,host,doc,win,canvas,overlay,status,info,stored,queue,click,get drawn(){return drawn;},get fullscreenDisposed(){return fullscreenDisposed;},tick(dt){clock+=dt*1000;const pending=[...queue.values()];queue.clear();pending.forEach(fn=>fn(clock));}};
 }
 test('visibility and blur pause active time until explicit resume',()=>{
   const e=environment();e.click({level:'0'});e.tick(.5);assert.ok(Math.abs(e.drawn.time-.5)<1e-8);
@@ -38,6 +39,7 @@ test('visibility and blur pause active time until explicit resume',()=>{
 test('disposal removes input listeners, frame and fullscreen controller',()=>{
   const e=environment();assert.ok(e.host.count()+e.doc.count()+e.win.count()+e.canvas.count()>0);assert.equal(e.queue.size,1);
   e.game.dispose();assert.equal(e.queue.size,0);assert.equal(e.host.count()+e.doc.count()+e.win.count()+e.canvas.count(),0);assert.equal(e.fullscreenDisposed,true);
+  assert.equal(e.info.count(),0);
   const before=e.drawn;e.tick(1);e.click({level:'0'});assert.equal(e.drawn,before);
 });
 test('blocked storage shows a notice while completion remains playable',()=>{
@@ -56,4 +58,9 @@ test('invalid storage resets safely and reset requires confirmation',()=>{
 test('restart clears time and menu freezes the current attempt',()=>{
   const e=environment();e.click({level:'0'});e.tick(.5);e.click({action:'restart'});assert.equal(e.drawn.time,0);
   e.click({action:'menu'});e.tick(5);assert.equal(e.drawn.time,0);e.game.dispose();
+});
+test('platform info pauses the game and retains native dialog key handling',()=>{
+  const e=environment();assert.match(e.overlay.innerHTML,/href="#alle"/);e.click({level:'0'});e.tick(.5);e.info.emit('click');e.tick(2);assert.ok(Math.abs(e.drawn.time-.5)<1e-8);
+  let prevented=false;e.doc.emit('keydown',{key:'Escape',target:{closest:selector=>selector==='dialog'?{}:null},preventDefault(){prevented=true;}});
+  assert.equal(prevented,false);e.tick(1);assert.ok(Math.abs(e.drawn.time-.5)<1e-8);e.game.dispose();
 });
