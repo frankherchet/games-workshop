@@ -1,6 +1,22 @@
 # Frogger – modernes Spielkonzept
 
-Status: Grafikstil gewählt – **Neon-Illustration in 2,5D mit Canvas 2D** (Variante B), bestätigt am 13. Oktober 2026. Noch keine spielbare Umsetzung. Geplant sind fünf Welten mit jeweils zehn handgebauten Levels, insgesamt 50.
+Status: **Neon-Illustration in 2,5D mit Canvas 2D** (Variante B), bestätigt am 13. Oktober 2026. Die fünf Welten mit jeweils zehn festen Levels sind spielbar implementiert im PR #7; noch nicht veröffentlicht. [Implementierungsplan mit Milestones und GitHub-Issues](frogger-plan.md).
+
+## Implementierungs- und Prüfstand
+
+50 feste Karten, alle Hauptmechaniken, Rettungen, drei optionale Glühwürmchen je Level, Sterne, Bestzeiten und lineare Freischaltung sind umgesetzt. Pfeiltasten/WASD, vier Richtungsbuttons und Wischen steuern das Spiel; Escape und Pause halten die aktive Zeit an. Der vorhandene Vollbildcontroller wird verwendet. Fortschritt bleibt unter `cs-games:frogger:v1` auf dem aktuellen Gerät; fehlerhafter oder blockierter Speicher verhindert das Spielen nicht. Zurücksetzen verlangt eine Bestätigung. Nur abgeschlossene Levels werden gespeichert, keine laufenden Versuche.
+
+Die Darstellung zeichnet Frosch, Verkehr, Plattformen, Pflanzen, Warnschilder und fünf Weltpaletten prozedural. Kleine Warnschilder werden durch lesbare Hinweise im HUD ergänzt. Das generierte Neon-Bild dient als Stilreferenz; die tatsächliche Spielgrafik ist eine einfachere, bewegliche Canvas-Zeichnung.
+
+![Tatsächliche Neon-Spielansicht im Browser](frogger-concepts/neon-gameplay.jpg)
+
+Screenshot aus einer getrennten lokalen QA-Seite mit freigeschalteten Testlevels und eigenem Speicherschlüssel; diese Testseite ist kein Bestandteil des Produktionsbuilds.
+
+**Automatisiert:** 137 Node-Tests und neun Python-Uploadertests bestehen, ebenso Build und Projektcheck. Davon prüfen 74 Frogger-Tests unter anderem alle 50 Karten: ein zeitlich möglicher Weg mit allen Glühwürmchen und nötigen Rettungen, sichere Portalausgänge, Phasengrenzen, Verkehr, Plattformmitfahrt, Rutschen, Speicher, reduzierte Bewegung, Pause und Listenerabbau. Eine zusätzliche Read-only-Prüfung hat drei Lücken aufgedeckt; sie wurden korrigiert und erneut geprüft.
+
+**Browser:** Levelabschluss per Tastatur, Freischaltung und Bestzeit nach Neuladen, Rücksetzbestätigung mit Abbruch, Pause, Dialogfokus mit Tab/Shift+Tab, Richtungsbuttons und Wischgeste bis zum Ziel sowie Portalankunft auf beweglicher Plattform geprüft. Alle fünf Welten visuell geöffnet. Hochkant 390 × 844, Querformat 844 × 390 und Desktopansicht geprüft; Richtungsbuttons im Querformat sind 54 × 44 CSS-Pixel groß. Native Vollbildansicht und Rückkehr per Button/Escape geprüft. Browser-Konsole ohne Warnungen oder Fehler.
+
+**Offen:** echte iPad-/Smartphone-Prüfung, mehrere Browser-Engines, belastbare Geräte-Performancewerte und Spielbalance mit menschlichen Testspielern. Der Solver weist die Lösbarkeit nach, nicht die passende Schwierigkeit. Bei künstlichem Viewport-Wechsel in nativer Vollbildansicht zeigte der Testbrowser eine skalierte Ansicht; Vollbild ohne Viewport-Override funktioniert. Reale Drehung im nativen Vollbild gehört deshalb ausdrücklich zur Geräteabnahme. Issue #15 und M6 bleiben bis zur Geräteabnahme offen. Kein Audio, kein Deployment und kein Merge.
 
 ## Spielidee
 
@@ -139,9 +155,9 @@ Teleportation erfolgt nur beim Betreten und löst am Ausgang nicht unmittelbar e
 
 ## Umsetzung im vorhandenen Projekt
 
-Der erste Umsetzungsschritt ist ein spielbarer Ausschnitt aus Sonnenauen mit Level 1-01 bis 1-03 im gewählten Grafikstil. Damit werden Sprunggefühl, Kollisionsdarstellung, Plattformmitfahrt und Touch-Steuerung geprüft, bevor 50 Levels ausgearbeitet werden. Das Ziel bleibt die komplette Kampagne, dieser Konzept-PR behauptet keine fertige Umsetzung.
+Die Umsetzung begann mit Sonnenauen 1-01 bis 1-03 und wurde in Milestone-Commits zur kompletten 50-Level-Kampagne erweitert. Der Prüfstand oben unterscheidet implementierte Funktionen von ausstehender Geräte- und Balanceabnahme.
 
-Die spätere Änderung erreicht diese Stellen:
+Die Integration erreicht diese Stellen:
 
 | Stelle | Vorgesehene Änderung |
 | --- | --- |
@@ -155,7 +171,7 @@ Die spätere Änderung erreicht diese Stellen:
 
 Fortschritt erhält einen eigenen versionierten Speicherschlüssel (`cs-games:frogger:v1`). Bestehende Bestwerte und Spielstände anderer Spiele werden nicht überschrieben. Eingaben, Timer und Rendering werden beim Spielwechsel entfernt. Spiellogik und Gefahrenphasen verwenden aktive Spielzeit; Pause und Neustart dürfen ihre Synchronisation nicht verschieben.
 
-## Abnahme der späteren Umsetzung
+## Abnahmekriterien
 
 - Genau fünf Welten und zehn auswählbare Levels je Welt; Freischaltung funktioniert, jedes Level hat eine geprüfte, zeitlich mögliche Route.
 - Alle Weltmechaniken lassen sich per Tastatur und Touch bedienen; Ziel, Wartezonen und Gefahren sind im gewählten Stil gut lesbar.
@@ -168,4 +184,4 @@ Fortschritt erhält einen eigenen versionierten Speicherschlüssel (`cs-games:fr
 
 Kein Multiplayer, kein Konto, keine Online-Bestenliste, kein Shop, kein Levelgenerator und kein frei steuerbares 3D-Kamerasystem. Audio gehört nicht zum ersten Ausschnitt; die Regeln müssen ohne Ton verständlich sein. Spätere Sounds benötigen eine eigene Umsetzung und passende Assets. Veröffentlichung erfolgt über den vorhandenen manuellen Freigabeprozess.
 
-Dieser PR liefert die Stilentscheidung für Neon in 2,5D, drei Konzeptbilder und den 50-Level-Plan. Die Konzeptbilder wurden visuell geprüft; Gameplay-Balance, implementierte Spielgrafik, Performance und reale Geräte sind noch nicht geprüft.
+Dieser PR liefert Stilentscheidung, Konzeptbilder, Plan, GitHub-Issues und die spielbare Kampagne. Balance und echte Geräteabnahme bleiben offen; die Veröffentlichung benötigt eine separate Freigabe.

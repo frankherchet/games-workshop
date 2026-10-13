@@ -4,6 +4,7 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 
 ## Enthalten
 
+- **Frogger – Weltenhüpfer:** Neon-Spiel in Canvas 2D mit fünf Welten und 50 festen Levels, Verkehr, Plattformmitfahrt, Ampeln, sinkenden Blättern, Eisrutschen und Portalen. Sterne, Bestzeiten und Freischaltung werden lokal gespeichert. Tastatur, Wischen, Richtungsbuttons, Pause und Vollbild. [Spielkonzept, Implementierungsplan und Prüfstand](docs/frogger.md). Noch nicht veröffentlicht; echte iPad-/Smartphone-Abnahme und Spielbalance sind offen.
 - Responsive Startseite, Suche und Kategorien.
 - Vollbild bei allen Spielen: native Fullscreen-API mit bildschirmfüllendem Browser-Fallback, proportional angepasstem Spielfeld, erreichbarer Steuerung und Rückkehr per Button oder Escape. Die tatsächliche Anzeige auf dem iPad muss noch geprüft werden.
 - Eigene, direkt verlinkbare Spielansichten über `#spiel/neon-breakout`, `#spiel/memory-quest` und `#spiel/pixel-runner`.
@@ -13,10 +14,6 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 - Memory Quest: acht Paare, Tastaturbedienung und Bestwert nach Zügen.
 - Pixel Runner: sieben Sterne, Sprünge, Abgründe, Stacheln und Zielportal.
 - Pause, Neustart und lokale Bestwerte. Keine Konten, kein Tracking, keine externen Fonts oder CDN-Abhängigkeiten. Diese Version hat keine Audioeffekte.
-
-## Geplante Spiele
-
-- **Frogger – Weltenhüpfer:** [Neon-Konzept mit fünf Welten à zehn Levels und drei Konzeptbildern](docs/frogger.md). Gewählter Stil: Neon in 2,5D mit Canvas 2D; noch keine spielbare Umsetzung.
 
 ## Entwickeln und prüfen
 
