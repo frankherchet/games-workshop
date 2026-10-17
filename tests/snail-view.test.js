@@ -29,3 +29,14 @@ test('iPad shop prompt is moved below the measured fullscreen button',()=>{
  const full={left:1286,top:136,right:1517,bottom:211},p=V.promptPosition({x:1330,y:190},{width:160,height:56},{width:1536,height:1067},[full]);assert.ok(p.top>=full.bottom+10);assert.ok(p.left+p.width<=1536-10);
  for(const [w,h]of [[390,844],[844,390],[1536,1067]]){const blocker={left:w-170,top:72,right:w-14,bottom:130},r=V.promptPosition({x:w-50,y:160},{width:150,height:48},{width:w,height:h},[blocker]);assert.ok(r.left>=0&&r.top>=0&&r.left+r.width<=w&&r.top+r.height<=h);assert.ok(r.left+r.width<=blocker.left||r.left>=blocker.right||r.top+r.height<=blocker.top||r.top>=blocker.bottom);}
 });
+
+test('Duck and trap proximity buttons independently select nearby objects and traps are day-only',()=>{
+ const s=M.newRun();const duck={id:1,type:'duck',x:480,y:510,hp:1},trap={id:2,type:'pit',x:500,y:510,hp:1};s.structures=[{id:3,type:'duck',x:800,y:400,hp:1},duck,trap,{id:4,type:'fence',x:466,y:510,hp:0}];
+ assert.deepEqual(V.structuresNearby(s),{duck,structure:trap});s.phase='night';assert.deepEqual(V.structuresNearby(s),{duck,structure:null});s.player.x=90;assert.deepEqual(V.structuresNearby(s),{duck:null,structure:null});s.over=true;assert.deepEqual(V.structuresNearby(s),{duck:null,structure:null});assert.deepEqual(V.structuresNearby(null),{duck:null,structure:null});
+});
+test('Multiple world actions avoid each other and HUD controls on tablet and phone',()=>{
+ for(const [width,height]of [[1536,1067],[390,844],[844,390]]){
+ const blocks=[{left:0,top:0,right:width,bottom:65},{left:width-170,top:72,right:width,bottom:130},{left:0,top:height-150,right:width,bottom:height}];
+ for(let i=0;i<3;i++){const p=V.promptPosition({x:width-100,y:170},{width:130,height:44},{width,height},blocks);for(const o of blocks)assert.ok(p.left+p.width<=o.left||p.left>=o.right||p.top+p.height<=o.top||p.top>=o.bottom,JSON.stringify({width,height,p,o}));blocks.push({left:p.left,top:p.top,right:p.left+p.width,bottom:p.top+p.height});}
+ }
+});

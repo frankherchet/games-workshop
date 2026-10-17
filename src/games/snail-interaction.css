@@ -13,3 +13,6 @@ body.game-is-fullscreen .header,body.game-is-fullscreen .footer{visibility:hidde
 .sn-proximity{transform:none;animation:sn-prompt-in-v6 .18s ease-out}.sn-proximity:after{left:calc(50% - 6px)}.sn-proximity-seed svg{display:none}.sn-proximity-seed:before{content:"✿";font-size:26px;color:#c7dfa5}@keyframes sn-prompt-in-v6{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
 
 .sn-defense-preview{display:block;width:76px;height:76px;margin:0 auto 8px;image-rendering:auto}
+
+
+.sn-move-panel{position:absolute;z-index:16;left:12px;bottom:12px;max-width:calc(100% - 24px);padding:8px 12px;border:2px solid #d7c08d;border-radius:9px;background:#344f42f2;color:#fff0c6;font-size:13px;box-shadow:0 3px 10px #13271d80}.sn-move-panel[hidden]{display:none}.sn-move-panel button{margin-left:10px;min-height:44px;padding:6px 12px;background:#eedfb9;color:#302d21;border:1px solid #a08b60;border-radius:6px;touch-action:manipulation}.sn-play.game-fullscreen .sn-move-panel{bottom:calc(175px + env(safe-area-inset-bottom))}.sn-proximity-duck,.sn-proximity-move{white-space:nowrap}@media(max-height:550px){.sn-play.game-fullscreen .sn-move-panel{bottom:125px;font-size:11px}}

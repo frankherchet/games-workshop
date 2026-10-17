@@ -72,8 +72,9 @@
     s.phase = 'night'; s.nightTime = 0; s.spawned = 0; s.spawnClock = 2; s.snails = [];
     s.waveTotal = Math.ceil((5 + s.nights * 2 + s.level * 3) * DIFFICULTIES[s.difficulty].enemies);
     for (const item of s.structures) if (item.type === 'duck') {
-      item.fed = s.inventory.food > 0;
-      if (item.fed) s.inventory.food--;
+      item.fed = item.preFed === true || s.inventory.food > 0;
+      if (item.fed && !item.preFed) s.inventory.food--;
+      item.preFed = false;
     }
     s.notice = 'Die Schnecken kommen. Hacke bereit halten!';
     return true;
@@ -88,6 +89,7 @@
     }
     s.nights++; s.lastIncome = income; s.phase = 'day'; s.dayTime = 0;
     s.structures = s.structures.filter(item => ++item.age < ITEMS[item.type].life && item.hp > 0);
+    for (const item of s.structures) if (item.type === 'duck') item.fed = false;
     s.notice = `Nacht ${s.nights} überlebt! Pflanzen bringen ${income} Münzen. Jetzt gießen und reparieren.`;
     checkLoss(s);
     return true;
@@ -129,13 +131,37 @@
     if(p.type){s.notice='Dieser Platz ist bereits bepflanzt. Wähle ein leeres Erdbeet.';return false;}
     return tend(s,p,seed);
   }
+  function duckFed(s,item) { return s.phase === 'night' ? item.fed === true : item.preFed === true; }
+  function feedDuck(s,id) {
+    if (s.over) return false;
+    const item=s.structures.find(t=>t.id===id&&t.type==='duck'&&t.hp>0);
+    if (!item || dist(item,s.player)>100) { s.notice='Gehe näher an die Laufente heran.'; return false; }
+    if (duckFed(s,item)) { s.notice='Diese Laufente ist für diese Nacht schon gefüttert.'; return false; }
+    if (!(s.inventory.food>0)) { s.notice='Futter fehlt. Kaufe eine Portion am Stand.'; return false; }
+    s.inventory.food--; item.fed=true; item.preFed=s.phase==='day';
+    s.notice=s.phase==='night'?'Laufente gefüttert – sie jagt jetzt Schnecken!':'Laufente gefüttert und für die kommende Nacht bereit.';
+    return true;
+  }
+  function placement(s,point,ignore=null) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+    const snapped={x:Math.round(point.x/32)*32,y:Math.round(point.y/32)*32};
+    if (dist(snapped,s.player)>105 || snapped.x<115 || snapped.x>845 || snapped.y<190 || snapped.y>530 ||
+      s.plots.some(p=>p.unlocked&&dist(p,snapped)<34) || s.structures.some(t=>t!==ignore&&dist(t,snapped)<36)) {
+      s.notice='Wähle einen freien Platz nahe deiner Figur, mit Abstand zu Beeten und anderen Fallen.'; return null;
+    }
+    return snapped;
+  }
+  function relocate(s,id,point) {
+    if (s.over || s.phase!=='day') return false;
+    const item=s.structures.find(t=>t.id===id&&t.type!=='duck'&&t.hp>0);
+    if (!item || dist(item,s.player)>105) { s.notice='Gehe näher an die Falle heran, um sie umzustellen.'; return false; }
+    const destination=placement(s,point,item); if (!destination) return false;
+    Object.assign(item,destination); s.notice=ITEMS[item.type].name+' umgestellt.'; return true;
+  }
   function place(s, type, point) {
     if (s.phase !== 'day' || s.over || !ITEMS[type] || type === 'food' || !s.inventory[type]) return false;
-    const snapped = { x: Math.round(point.x / 32) * 32, y: Math.round(point.y / 32) * 32 };
-    if (dist(snapped, s.player) > 105 || snapped.x < 115 || snapped.x > 845 || snapped.y < 190 || snapped.y > 530 ||
-      s.plots.some(p => p.unlocked && dist(p, snapped) < 34) || s.structures.some(t => dist(t, snapped) < 36)) {
-      s.notice = 'Baue auf einem freien Weg nahe deiner Figur, nicht direkt auf dem Beet.'; return false;
-    }
+    const snapped = placement(s,point);
+    if (!snapped) return false;
     s.inventory[type]--; const item = ITEMS[type];
     s.structures.push({ id: s.nextId++, type, ...snapped, hp: item.hp, charges: item.charges, age: 0, fed: false, timer: 0 });
     s.notice = `${item.name} aufgestellt.`; return true;
@@ -272,7 +298,8 @@
       return result;
     } catch { return null; }
   }
-  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, plant, place, repair, attack, spawn, step, campaign, record, parseSave };
+  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, plant, place, duckFed, feedDuck, relocate, repair, attack, spawn, step, campaign, record, parseSave };
   root.SnailModel = model;
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
 })(globalThis);
+

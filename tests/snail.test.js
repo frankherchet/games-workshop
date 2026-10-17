@@ -156,3 +156,29 @@ test('A fed duck visibly pursues a distant snail, attacks only at close range an
 test('Ducks stroll during daytime; an unfed duck does not chase or damage a snail',()=>{
  const s=M.newRun();s.structures=[{type:'duck',id:1,x:650,y:450,hp:1,charges:0,age:0,timer:0,fed:false}];M.step(s,.05);assert.ok(M.dist(s.structures[0],{x:650,y:450})>0);s.inventory.food=0;M.beginNight(s);const prey=enemy(s,{x:400,y:450}),d=s.structures[0];const before=M.dist(d,prey);M.step(s,.05);assert.equal(s.kills,0);assert.equal(prey.hp,1);assert.ok(d.x>640);assert.ok(M.dist(d,prey)>before-3);
 });
+
+test('Manual daytime feeding reserves one portion across save and dusk without double charging',()=>{
+ const s=M.newRun();s.structures=[{id:91,type:'duck',x:480,y:480,hp:1,charges:0,age:0,timer:0}];s.inventory.food=2;
+ assert.equal(M.feedDuck(s,91),true);assert.equal(s.inventory.food,1);assert.equal(M.feedDuck(s,91),false);assert.equal(s.inventory.food,1);
+ const r=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.equal(M.duckFed(r,r.structures[0]),true);M.beginNight(r);assert.equal(r.inventory.food,1);assert.equal(r.structures[0].fed,true);
+ r.spawned=r.waveTotal;M.finishNight(r);assert.equal(M.duckFed(r,r.structures[0]),false);M.beginNight(r);assert.equal(r.inventory.food,0);assert.equal(r.structures[0].fed,true);
+});
+test('Nearby hungry ducks can be fed at night and immediately resume pursuit; failures consume nothing',()=>{
+ const s=M.newRun();s.structures=[{id:91,type:'duck',x:480,y:480,hp:1,charges:0,age:0,timer:0}];s.inventory.food=0;M.beginNight(s);
+ assert.equal(M.feedDuck(s,91),false);s.inventory.food=2;s.player.x=90;assert.equal(M.feedDuck(s,91),false);assert.equal(s.inventory.food,2);
+ s.player.x=465;assert.equal(M.feedDuck(s,91),true);const n=enemy(s,{x:600,y:480}),d=s.structures[0],before=M.dist(d,n);M.step(s,.05);assert.ok(M.dist(d,n)<before);assert.equal(s.inventory.food,1);assert.equal(M.feedDuck(s,91),false);
+ s.over=true;assert.equal(M.feedDuck(s,91),false);assert.equal(s.inventory.food,1);
+});
+test('Relocating every static defense preserves identity, wear, charges, inventory and autosave',()=>{
+ for(const type of Object.keys(M.ITEMS).filter(t=>!['duck','food'].includes(t))){
+  const s=M.newRun();s.player={x:465,y:460,dx:1,dy:0};const item={id:91,type,x:448,y:448,hp:1,charges:2,age:1,timer:.7};s.structures=[item];const inventory={...s.inventory},money=s.money;
+  assert.equal(M.relocate(s,91,{x:512,y:480}),true,type);assert.equal(s.structures[0],item);assert.deepEqual(item,{id:91,type,x:512,y:480,hp:1,charges:2,age:1,timer:.7});assert.deepEqual(s.inventory,inventory);assert.equal(s.money,money);
+  const r=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.deepEqual(r.structures[0],item);
+ }
+});
+test('Invalid destinations, remote traps and nighttime relocation never change or remove defenses',()=>{
+ const s=M.newRun();s.player={x:465,y:460,dx:1,dy:0};s.structures=[{id:91,type:'electric',x:448,y:448,hp:1,charges:2,age:1,timer:.7},{id:92,type:'pit',x:512,y:480,hp:1,charges:3,age:0,timer:0}];
+ const original=JSON.stringify(s.structures);
+ for(const p of [{x:512,y:480},{x:310,y:245},{x:850,y:530},{x:NaN,y:480},null]){assert.equal(M.relocate(s,91,p),false);assert.equal(JSON.stringify(s.structures),original);}
+ s.player.x=90;assert.equal(M.relocate(s,91,{x:128,y:480}),false);s.player.x=465;M.beginNight(s);assert.equal(M.relocate(s,91,{x:480,y:480}),false);assert.equal(JSON.stringify(s.structures),original);
+});
