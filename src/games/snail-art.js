@@ -231,15 +231,18 @@
     if(night)for(let i=0;i<4;i++){const x=(time*6+i*287)%1320-180,y=230+i*88+Math.sin(time*.3+i)*12;c.save();c.translate(x,y);c.scale(2.8,.24);const fog=c.createRadialGradient(0,0,5,0,0,110);fog.addColorStop(0,'#bdcad623');fog.addColorStop(.55,'#b2c0cd12');fog.addColorStop(1,'#b2c0cd00');c.fillStyle=fog;c.fillRect(-110,-110,220,220);c.restore();}
   }
   // Decorative visitor: derived only from elapsed active play time, never saved in the simulation.
-  function gardenCat(s,time){
+  function gardenCat(s,time,origin=null){
     if(!Number.isFinite(time)||time<10)return null;
     const cycle=Math.floor(time/10)-1,age=time%10,seed=cycle*137+s.level*977;
     const obstacles=[...s.plots.filter(p=>p.unlocked),...s.structures];
     for(let i=0;i<80;i++){
-      const x=140+hash(seed+i*13,41)*680,y=205+hash(seed+i*17,83)*315;
+      const nearby=origin&&i<60;
+      const x=nearby?Math.max(140,Math.min(820,origin.x+(hash(seed+i*13,41)-.5)*210)):140+hash(seed+i*13,41)*680;
+      const y=nearby?Math.max(205,Math.min(520,origin.y+(hash(seed+i*17,83)-.5)*150)):205+hash(seed+i*17,83)*315;
       const dx=(hash(seed+i*19,97)>.5?1:-1)*(55+hash(seed+i*23,101)*65),dy=(hash(seed+i*29,107)-.5)*55;
       const target={x:Math.max(140,Math.min(820,x+dx)),y:Math.max(205,Math.min(520,y+dy))};
       const vx=target.x-x,vy=target.y-y,length=vx*vx+vy*vy;
+      if(origin&&Math.hypot(x-origin.x,y-origin.y)<42)continue;
       if(obstacles.some(o=>{const t=length?Math.max(0,Math.min(1,((o.x-x)*vx+(o.y-y)*vy)/length)):0;return Math.hypot(o.x-x-vx*t,o.y-y-vy*t)<42;}))continue;
       const progress=motion?.matches?0:Math.max(0,Math.min(1,(age-3)/4));
       return {x:x+vx*progress,y:y+vy*progress,walking:!motion?.matches&&age>=3&&age<7,facing:vx<0?-1:1,age,cycle};
@@ -270,7 +273,7 @@
     rect(c,hx-11,hy+5,5,1,'#42504e');rect(c,hx+7,hy+5,5,1,'#42504e');
     c.restore();
   }
-  function garden(c,s,time=0,input={},effects=[],catTime=time){
+  function garden(c,s,time=0,input={},effects=[],catTime=time,catOrigin=null){
     const effectTime=time;
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
     loadScenery();
@@ -288,7 +291,7 @@
     for(const p of s.plots)flower(c,p,time,night);for(const t of s.structures)structure(c,t,time);
     atmosphere(c,s,time);
     for(const n of s.snails)snail(c,n,time,night);
-    const cat=gardenCat(s,catTime);if(cat&&cat.y<=s.player.y)blackCat(c,cat);
+    const cat=gardenCat(s,catTime,catOrigin);if(cat&&cat.y<=s.player.y)blackCat(c,cat);
     character(c,s.character,s.player.x,s.player.y,time,Math.hypot(input.x||0,input.y||0)>.1,s.player,{water:s.lastAction>0});
     if(cat&&cat.y>s.player.y)blackCat(c,cat);
     if(s.weapon&&s.weapon!=='hoe'&&!s.attackFlash&&!s.lastAction)root.SnailExtras?.draw(c,s.weapon,s.player.x+s.player.dx*20,s.player.y-9+s.player.dy*6,30);

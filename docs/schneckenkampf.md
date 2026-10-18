@@ -115,3 +115,7 @@ Bei nahen Fallen und stationären Verteidigungen erscheint tagsüber „Umstelle
 ### V0.9 · Schwarze Gartenkatze
 
 Alle zehn Sekunden aktiver Spielzeit besucht genau eine schwarze Pixelkatze eine freie Stelle im Garten. Sie sitzt drei Sekunden, läuft vier Sekunden einen kurzen freien Weg und setzt sich wieder hin. Mit dem nächsten Zehn-Sekunden-Abschnitt wechselt sie den Ort. Beete und Verteidigungen werden bei der Wegwahl berücksichtigt. Sie greift nicht ins Spielgeschehen ein und verändert weder Ressourcen noch gespeicherte Daten. Pause und Shop halten ihren Besuchstimer an; beim Fortsetzen einer Partie beginnt er neu. Bei reduzierter Bewegung sitzt sie ruhig. In einem vollständig belegten Garten entfällt der Besuch, bis wieder Platz ist.
+
+### V0.9.1 · Katzenbesuch sichtbar ab Spielstart
+
+Die Katze ist ab dem Betreten oder Fortsetzen sichtbar. Ihr Zehn-Sekunden-Timer verwendet echte aktive Zeit statt des auf 50 ms je Bild begrenzten Simulationsschritts. Pause und Shop bleiben ausgenommen. Neue Besucherpositionen werden bevorzugt in der Nähe der Figur gesucht; der Bezugspunkt bleibt während eines Besuchs stabil, damit die Katze beim Laufen der Figur nicht springt. Freie Wege, unveränderte Ressourcen und der bestehende Spielstand bleiben erhalten.

@@ -76,3 +76,6 @@ test('Reduced-motion cat sits still and a fully occupied garden skips its visit'
  const sandbox={SnailModel:M,matchMedia:()=>({matches:true})};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);const s=M.newRun(),a=sandbox.SnailArt.gardenCat(s,11),b=sandbox.SnailArt.gardenCat(s,15);assert.equal(b.walking,false);assert.equal(a.x,b.x);assert.equal(a.y,b.y);
  for(let x=120;x<=850;x+=30)for(let y=180;y<=550;y+=30)s.structures.push({x,y});assert.equal(sandbox.SnailArt.gardenCat(s,15),null);
 });
+test('A cat visit prefers a clear place near the supplied player origin',()=>{
+ const s=M.newRun(),origin={x:465,y:510};for(let cycle=1;cycle<=30;cycle++){const cat=global.SnailArt.gardenCat(s,cycle*10,origin);assert.ok(cat);assert.ok(Math.abs(cat.x-origin.x)<=105);assert.ok(Math.abs(cat.y-origin.y)<=75);assert.ok(Math.hypot(cat.x-origin.x,cat.y-origin.y)>=42);}
+});
