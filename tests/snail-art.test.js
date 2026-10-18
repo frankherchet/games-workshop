@@ -51,3 +51,28 @@ test('A failed scenery request falls back to procedural art',async()=>{
   const sandbox={SnailModel:M,Image,SnailAssets:{garden:'missing.png'}};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
   assert.equal(await sandbox.SnailArt.ready,false);const c=canvas();sandbox.SnailArt.garden(c.ctx,scene(0,'gardener',false),0);assert.ok(c.result().count>4000);
 });
+test('One decorative cat arrives after ten seconds, sits, walks and changes place each interval',()=>{
+ const s=M.newRun(),A=global.SnailArt,before=JSON.stringify(s);
+ assert.equal(A.gardenCat(s,0),null);assert.equal(A.gardenCat(s,9.99),null);
+ const first=A.gardenCat(s,10),sit=A.gardenCat(s,12),walk=A.gardenCat(s,15),rest=A.gardenCat(s,18),next=A.gardenCat(s,20);
+ assert.ok(first);assert.equal(first.walking,false);assert.equal(first.x,sit.x);assert.equal(first.y,sit.y);assert.equal(walk.walking,true);assert.ok(Math.hypot(walk.x-first.x,walk.y-first.y)>5);assert.equal(rest.walking,false);assert.notEqual(next.cycle,first.cycle);assert.ok(Math.hypot(next.x-first.x,next.y-first.y)>10);assert.equal(JSON.stringify(s),before);
+});
+test('Cat routes stay in the garden and clear of beds and defenses in every garden',()=>{
+ const A=global.SnailArt;
+ for(let level=0;level<3;level++){
+  const s=M.newRun(level);s.plots.forEach(p=>p.unlocked=true);s.structures=[{x:650,y:400}];const before=JSON.stringify(s);
+  for(let interval=1;interval<=30;interval++)for(let t=0;t<10;t+=.5){
+   const cat=A.gardenCat(s,interval*10+t);assert.ok(cat);assert.ok(cat.x>=140&&cat.x<=820&&cat.y>=205&&cat.y<=520);
+   for(const o of [...s.plots,...s.structures])assert.ok(Math.hypot(cat.x-o.x,cat.y-o.y)>=42-1e-7);
+  }
+  assert.equal(JSON.stringify(s),before);
+ }
+});
+test('Cat drawing has sitting and walking frames, valid pixels and never mutates gameplay',()=>{
+ const s=scene(0,'fox',true),before=JSON.stringify(s),A=global.SnailArt,a=canvas(),b=canvas();A.blackCat(a.ctx,A.gardenCat(s,11));A.blackCat(b.ctx,A.gardenCat(s,15));assert.notEqual(a.result().hash,b.result().hash);
+ for(const time of [10,15,19,20]){const c=canvas();A.garden(c.ctx,s,time,{},[],time);c.result();}assert.equal(JSON.stringify(s),before);
+});
+test('Reduced-motion cat sits still and a fully occupied garden skips its visit',()=>{
+ const sandbox={SnailModel:M,matchMedia:()=>({matches:true})};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);const s=M.newRun(),a=sandbox.SnailArt.gardenCat(s,11),b=sandbox.SnailArt.gardenCat(s,15);assert.equal(b.walking,false);assert.equal(a.x,b.x);assert.equal(a.y,b.y);
+ for(let x=120;x<=850;x+=30)for(let y=180;y<=550;y+=30)s.structures.push({x,y});assert.equal(sandbox.SnailArt.gardenCat(s,15),null);
+});

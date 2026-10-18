@@ -230,7 +230,47 @@
     }
     if(night)for(let i=0;i<4;i++){const x=(time*6+i*287)%1320-180,y=230+i*88+Math.sin(time*.3+i)*12;c.save();c.translate(x,y);c.scale(2.8,.24);const fog=c.createRadialGradient(0,0,5,0,0,110);fog.addColorStop(0,'#bdcad623');fog.addColorStop(.55,'#b2c0cd12');fog.addColorStop(1,'#b2c0cd00');c.fillStyle=fog;c.fillRect(-110,-110,220,220);c.restore();}
   }
-  function garden(c,s,time=0,input={},effects=[]){
+  // Decorative visitor: derived only from elapsed active play time, never saved in the simulation.
+  function gardenCat(s,time){
+    if(!Number.isFinite(time)||time<10)return null;
+    const cycle=Math.floor(time/10)-1,age=time%10,seed=cycle*137+s.level*977;
+    const obstacles=[...s.plots.filter(p=>p.unlocked),...s.structures];
+    for(let i=0;i<80;i++){
+      const x=140+hash(seed+i*13,41)*680,y=205+hash(seed+i*17,83)*315;
+      const dx=(hash(seed+i*19,97)>.5?1:-1)*(55+hash(seed+i*23,101)*65),dy=(hash(seed+i*29,107)-.5)*55;
+      const target={x:Math.max(140,Math.min(820,x+dx)),y:Math.max(205,Math.min(520,y+dy))};
+      const vx=target.x-x,vy=target.y-y,length=vx*vx+vy*vy;
+      if(obstacles.some(o=>{const t=length?Math.max(0,Math.min(1,((o.x-x)*vx+(o.y-y)*vy)/length)):0;return Math.hypot(o.x-x-vx*t,o.y-y-vy*t)<42;}))continue;
+      const progress=motion?.matches?0:Math.max(0,Math.min(1,(age-3)/4));
+      return {x:x+vx*progress,y:y+vy*progress,walking:!motion?.matches&&age>=3&&age<7,facing:vx<0?-1:1,age,cycle};
+    }
+    return null; // A completely occupied garden has no safe visiting place.
+  }
+  function blackCat(c,cat){
+    if(!cat)return;
+    const {x,y,facing,walking,age}=cat,step=walking?Math.sin(age*14):0;
+    c.save();c.translate(Math.round(x),Math.round(y));c.scale(facing,1);
+    oval(c,0,2,16,5,'#17261f66',1);
+    // Fine charcoal pixels, cool reflected light, pointed ears and a curled tail.
+    if(!walking){
+      rect(c,-15,-13,3,11,'#11171e');rect(c,-18,-16,5,4,'#1c2530');rect(c,-17,-18,3,3,'#42504e');rect(c,-14,-5,7,5,'#11171e');
+      oval(c,0,-10,10,13,'#11171e',1);oval(c,2,-11,7,11,'#202a34',1);oval(c,3,-13,4,8,'#2b3540',1);
+      rect(c,-6,-1,6,3,'#34413f');rect(c,3,-1,7,3,'#42504e');rect(c,-4,-13,1,10,'#42504e');
+    }else{
+      rect(c,-21,-20+step*.3,3,13,'#11171e');rect(c,-19,-11,7,4,'#1c2530');
+      oval(c,-2,-10,13,7,'#11171e',1);oval(c,-3,-12,11,5,'#26313b',1);rect(c,-9,-16,13,2,'#42504e');
+      for(const [lx,offset]of [[-10,step],[4,-step]]){rect(c,lx,-7,4,8+offset*2,'#11171e');rect(c,lx-1,1+offset*2,6,2,'#34413f');}
+    }
+    const hx=walking?10:0,hy=walking?-21+Math.abs(step):-26;
+    oval(c,hx,hy,8,7,'#11171e',1);oval(c,hx+1,hy,6,5,'#2b3540',1);
+    for(const ex of [-7,4]){rect(c,hx+ex,hy-12,3,9,'#11171e');rect(c,hx+ex+1,hy-10,1,5,'#66565c');}
+    rect(c,hx-4,hy-2,3,2,'#bdce78');rect(c,hx+3,hy-2,3,2,'#bdce78');rect(c,hx-3,hy-2,1,2,'#11171e');rect(c,hx+4,hy-2,1,2,'#11171e');
+    rect(c,hx,hy+2,2,1,'#b58b90');rect(c,hx-2,hy+4,5,1,'#42504e');
+    rect(c,hx-12,hy+2,6,1,'#87968b');rect(c,hx+7,hy+2,6,1,'#87968b');
+    rect(c,hx-11,hy+5,5,1,'#42504e');rect(c,hx+7,hy+5,5,1,'#42504e');
+    c.restore();
+  }
+  function garden(c,s,time=0,input={},effects=[],catTime=time){
     const effectTime=time;
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
     loadScenery();
@@ -248,7 +288,9 @@
     for(const p of s.plots)flower(c,p,time,night);for(const t of s.structures)structure(c,t,time);
     atmosphere(c,s,time);
     for(const n of s.snails)snail(c,n,time,night);
+    const cat=gardenCat(s,catTime);if(cat&&cat.y<=s.player.y)blackCat(c,cat);
     character(c,s.character,s.player.x,s.player.y,time,Math.hypot(input.x||0,input.y||0)>.1,s.player,{water:s.lastAction>0});
+    if(cat&&cat.y>s.player.y)blackCat(c,cat);
     if(s.weapon&&s.weapon!=='hoe'&&!s.attackFlash&&!s.lastAction)root.SnailExtras?.draw(c,s.weapon,s.player.x+s.player.dx*20,s.player.y-9+s.player.dy*6,30);
     rect(c,s.player.x+s.player.dx*30-2,s.player.y+s.player.dy*30-2,4,4,night?'#fff0b4':'#e9d595');
     if(s.attackFlash>0){const direction=Math.atan2(s.player.dy,s.player.dx),progress=1-s.attackFlash/.22,angle=direction-.7+progress*1.4;c.strokeStyle='#f4df9b9e';c.lineWidth=3;c.beginPath();c.arc(s.player.x,s.player.y,58,direction-.6,direction+.6);c.stroke();const hx=s.player.x+Math.cos(angle)*43,hy=s.player.y+Math.sin(angle)*43;c.strokeStyle='#b1905d';c.lineWidth=4;c.beginPath();c.moveTo(s.player.x,s.player.y-14);c.lineTo(hx,hy);c.stroke();if(!s.weapon||s.weapon==='hoe'){rect(c,hx-6,hy-4,13,7,'#b9c5c4');rect(c,hx-6,hy-4,13,2,'#e6eae0');}else root.SnailExtras?.draw(c,s.weapon,hx,hy,38);}
@@ -265,5 +307,5 @@
     }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,character,sprite,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
+  root.SnailArt={garden,character,sprite,gardenCat,blackCat,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
 })(globalThis);
