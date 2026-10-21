@@ -75,3 +75,15 @@ test('Player movement does not move a resting cat, reduced motion freezes it, an
  const sandbox={SnailModel:M,matchMedia:()=>({matches:true})};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);const quiet=sandbox.SnailArt.createCat(s),before=JSON.stringify(quiet);sandbox.SnailArt.updateCat(quiet,s,30);assert.equal(JSON.stringify(quiet),before);
  for(let x=120;x<=850;x+=30)for(let y=180;y<=550;y+=30)s.structures.push({x,y});assert.equal(A.createCat(s),null);
 });
+test('Refined cat poses render in warm daylight and cool moonlight without changing state',()=>{
+ const A=global.SnailArt,s=M.newRun();
+ for(const mode of ['sit','walk','play','groom','sleep']){
+  const cat={...A.createCat(s),mode,previousMode:'sit',age:1.3,walking:mode==='walk'},before=JSON.stringify(cat),day=canvas(),night=canvas();
+  A.blackCat(day.ctx,cat,false);A.blackCat(night.ctx,cat,true);assert.notEqual(day.result().hash,night.result().hash);assert.equal(JSON.stringify(cat),before);
+  for(const age of [0,.1,.325,.65]){const transition={...cat,age},c=canvas();A.blackCat(c.ctx,transition,true);c.result();}
+ }
+});
+test('Reduced motion renders a fixed cat pose even when its animation age differs',()=>{
+ const sandbox={SnailModel:M,matchMedia:()=>({matches:true})};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
+ for(const mode of ['walk','play','groom','sleep']){const cat={...sandbox.SnailArt.createCat(M.newRun()),mode,age:1},a=canvas(),b=canvas();sandbox.SnailArt.blackCat(a.ctx,cat,true);sandbox.SnailArt.blackCat(b.ctx,{...cat,age:3},true);assert.equal(a.result().hash,b.result().hash);}
+});

@@ -123,3 +123,7 @@ Die Katze ist ab dem Betreten oder Fortsetzen sichtbar. Ihr Zehn-Sekunden-Timer 
 ### V0.10 · Natürliches Katzenleben
 
 Die Katze behält während einer Partie ihre Position und läuft mit 24 Garteneinheiten pro Sekunde auf freien Wegen. Sie wird nicht mehr alle zehn Sekunden neu platziert. Sitzpausen, spielerisches Pföteln und kleine Hüpfer, Fellpflege und 22–40 Sekunden lange Liegepausen wechseln sich ab. Beim Schlafen sind ihre Augen geschlossen und der Körper bewegt sich leicht mit der Atmung. Neue Hindernisse stoppen die Katze, statt sie zu versetzen. Sie bleibt rein dekorativ, pausiert mit dem Spiel und wird beim Fortsetzen neu initialisiert. Bestehende Spielstände und die Spielbalance bleiben erhalten. Diese Version ersetzt das frühere Zehn-Sekunden-Besuchsverhalten.
+
+### V0.11 · Katzenzeichnung und Animationen
+
+Feine Fellpixel, runde Pfoten, dreieckige Ohren, Schnurrhaare und eine bewegliche Schwanzspitze passen die Katze an den detaillierten Garten an. Vier abwechselnde Pfoten und dezentes Kopfnicken begleiten das Laufen. Ein 0,65 Sekunden langer weicher Haltungswechsel verbindet Sitzen, Laufen und Hinlegen; Schlafen zeigt geschlossene Augen und ruhige Atmung. Beim Spielen streckt die Katze die Pfote aus und hüpft leicht, bei der Fellpflege schließt sie die Augen und leckt ihre Pfote. Tageslicht wirkt wärmer, Mondlicht blaugrau mit zurückhaltendem Augenglanz. Reduzierte Bewegung bleibt berücksichtigt.
