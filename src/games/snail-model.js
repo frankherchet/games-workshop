@@ -150,6 +150,16 @@
     s.notice=s.phase==='night'?'Laufente gefüttert – sie jagt jetzt Schnecken!':'Laufente gefüttert und für die kommende Nacht bereit.';
     return true;
   }
+  function feedAllDucks(s) {
+    if(s.over)return false;
+    const hungry=s.structures.filter(t=>t.type==='duck'&&t.hp>0&&!duckFed(s,t));
+    if(!hungry.length){s.notice='Alle Laufenten sind bereits gefüttert.';return false;}
+    if(s.inventory.food<hungry.length){s.notice=`Du brauchst ${hungry.length} Portionen Futter. Vorrat: ${s.inventory.food}. Kaufe Futter am Stand.`;return false;}
+    s.inventory.food-=hungry.length;
+    for(const duck of hungry){duck.fed=true;duck.preFed=s.phase==='day';}
+    s.notice=`${hungry.length} Laufenten gefüttert – ${s.phase==='night'?'sie jagen jetzt Schnecken!':'für die kommende Nacht bereit.'}`;
+    return true;
+  }
   function placement(s,point,ignore=null) {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
     const snapped={x:Math.round(point.x/32)*32,y:Math.round(point.y/32)*32};
@@ -352,7 +362,7 @@
       return result;
     } catch { return null; }
   }
-  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, BOSS_THEMES, BOSS_ATTACKS, BOSS_DESIGNS, isBossNight, bossStats, bossAttackPattern, newRun, beginNight, finishNight, buy, tend, plant, place, duckFed, feedDuck, relocate, repair, attack, spawn, step, campaign, record, parseSave };
+  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, BOSS_THEMES, BOSS_ATTACKS, BOSS_DESIGNS, isBossNight, bossStats, bossAttackPattern, newRun, beginNight, finishNight, buy, tend, plant, place, duckFed, feedDuck, feedAllDucks, relocate, repair, attack, spawn, step, campaign, record, parseSave };
   root.SnailModel = model;
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
 })(globalThis);

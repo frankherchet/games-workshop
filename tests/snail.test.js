@@ -232,3 +232,14 @@ test('Poison damages over time, forest roots slow movement, and boss death ends 
  const roots=bossEncounter(2),plain=JSON.parse(JSON.stringify(roots));roots.bossAttacks=M.bossAttackPattern(roots,roots.snails[0],roots.player);Object.assign(roots.bossAttacks[0],{hit:true,timer:-.1,pulses:0});const x=roots.player.x;M.step(roots,.05,{x:1});M.step(plain,.05,{x:1});assert.ok(Math.abs((roots.player.x-x)/(plain.player.x-x)-.55)<1e-8);
  roots.player={x:roots.snails[0].x-20,y:roots.snails[0].y,dx:1,dy:0};roots.snails[0].hp=1;M.attack(roots);assert.equal(roots.bossAttacks.length,0);
 });
+test('Bulk feeding reaches all hungry ducks, skips fed and dead ducks, and survives save and dusk',()=>{
+ const s=M.newRun();s.structures=[{id:1,type:'duck',x:140,y:210,hp:1},{id:2,type:'duck',x:800,y:210,hp:1},{id:3,type:'duck',x:600,y:500,hp:1,preFed:true},{id:4,type:'duck',x:300,y:500,hp:0},{id:5,type:'fence',x:300,y:500,hp:3}];s.structures.forEach(t=>Object.assign(t,{charges:0,age:0,timer:0}));s.inventory.food=4;
+ assert.equal(M.feedAllDucks(s),true);assert.equal(s.inventory.food,2);assert.equal(M.feedAllDucks(s),false);assert.equal(s.inventory.food,2);assert.equal(s.structures[3].fed,undefined);assert.equal(s.structures[4].fed,undefined);
+ s.structures=s.structures.filter(t=>t.hp>0);
+ const r=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];M.beginNight(r);assert.equal(r.inventory.food,2);assert.ok(r.structures.filter(t=>t.type==='duck'&&t.hp>0).every(t=>t.fed));
+});
+test('Bulk feeding consumes nothing without enough food and supports nighttime feeding',()=>{
+ const s=M.newRun();s.structures=[{id:1,type:'duck',x:140,y:210,hp:1},{id:2,type:'duck',x:800,y:210,hp:1}];s.inventory.food=1;
+ assert.equal(M.feedAllDucks(s),false);assert.equal(s.inventory.food,1);assert.ok(s.structures.every(t=>!t.fed));
+ s.phase='night';s.inventory.food=2;assert.equal(M.feedAllDucks(s),true);assert.equal(s.inventory.food,0);assert.ok(s.structures.every(t=>t.fed&&!t.preFed));s.over=true;s.inventory.food=2;assert.equal(M.feedAllDucks(s),false);assert.equal(s.inventory.food,2);
+});

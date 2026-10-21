@@ -90,3 +90,24 @@ test('Reduced motion renders a fixed cat pose even when its animation age differ
 test('Every elemental boss attack renders its warning and impact with valid colors',()=>{
  for(const theme of Object.keys(M.BOSS_ATTACKS))for(const hit of [false,true]){const c=canvas();global.SnailArt.bossAttack(c.ctx,{theme,hit,x:400,y:300,fromX:700,fromY:450,age:hit?2:1,timer:hit?-.2:.8,radius:42});c.result();}
 });
+test('Each garden renders its own scenery when switching between levels',async()=>{
+ const loaded=[],drawn=[];
+ class Image{constructor(){this.width=1536;this.height=1024;this.naturalWidth=1536;}set src(value){this.source=value;loaded.push(value);this.onload();}}
+ const sandbox={SnailModel:M,Image,SnailAssets:{garden:'farm.png',gardenForest:'forest.png',gardenCastle:'castle.png'}};
+ vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
+ assert.equal(await sandbox.SnailArt.ready,true);assert.deepEqual(loaded,['farm.png','forest.png','castle.png']);
+ for(const level of [0,1,2,1,0]){
+  const c=canvas();Object.assign(c.ctx,{rect(){},clip(){},drawImage(image){drawn.push(image.source);}});
+  const before=drawn.length;sandbox.SnailArt.garden(c.ctx,scene(level,'fox',false),0);c.result();
+  assert.ok(drawn.length>before);assert.ok(drawn.slice(before).every(source=>source===['farm.png','forest.png','castle.png'][level]));
+ }
+ assert.equal(loaded.length,3);
+});
+test('A failed themed garden uses procedural scenery instead of another garden image',async()=>{
+ class Image{constructor(){this.width=1536;this.naturalWidth=1536;}set src(value){if(value==='forest.png')this.onerror();else this.onload();}}
+ const sandbox={SnailModel:M,Image,SnailAssets:{garden:'farm.png',gardenForest:'forest.png',gardenCastle:'castle.png'}};
+ vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
+ assert.equal(await sandbox.SnailArt.ready,false);
+ const c=canvas();c.ctx.drawImage=()=>assert.fail('Forest must not show farm scenery after a failed load');
+ sandbox.SnailArt.garden(c.ctx,scene(1,'fox',false),0);assert.ok(c.result().count>4000);
+});

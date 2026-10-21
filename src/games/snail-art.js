@@ -1,12 +1,18 @@
 (function(root) {
   'use strict';
   const M=root.SnailModel, terrainCache=new Map();
-  let scenery=null,sceneryReady=null;
-  function loadScenery(){
-    if(sceneryReady)return sceneryReady;
-    if(!root.Image||!root.SnailAssets?.garden)return Promise.resolve(false);
-    sceneryReady=new Promise(resolve=>{scenery=new root.Image();scenery.onload=()=>resolve(true);scenery.onerror=()=>resolve(false);scenery.src=root.SnailAssets.garden;});
-    return sceneryReady;
+  const sceneryCache=new Map();
+  function scenerySource(level=0){
+    return root.SnailAssets?.[['garden','gardenForest','gardenCastle'][level]]||root.SnailAssets?.garden;
+  }
+  function loadScenery(level=0){
+    const source=scenerySource(level);
+    if(!root.Image||!source)return Promise.resolve(false);
+    if(sceneryCache.has(source))return sceneryCache.get(source).ready;
+    const entry={image:new root.Image(),ready:null,loaded:false};
+    sceneryCache.set(source,entry);
+    entry.ready=new Promise(resolve=>{entry.image.onload=()=>{entry.loaded=(entry.image.naturalWidth||entry.image.width)>0;resolve(entry.loaded);};entry.image.onerror=()=>resolve(false);entry.image.src=source;});
+    return entry.ready;
   }
   const motion=root.matchMedia?.('(prefers-reduced-motion: reduce)');
   const palettes={'.':null,h:'#49382f',s:'#e9bfa0',d:'#bf866b',g:'#455d4a',G:'#739264',b:'#3d6573',B:'#78a2aa',y:'#d5ae65',Y:'#fae2a0',o:'#ba6537',O:'#f0a663',k:'#26353b',w:'#f3e6cb',p:'#c583a2'};
@@ -376,16 +382,15 @@
   function garden(c,s,time=0,input={},effects=[],cat=null){
     const effectTime=time;
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
-    loadScenery();
-    if(scenery?.complete&&(scenery.naturalWidth||scenery.width)>0){
+    loadScenery(s.level);
+    const entry=sceneryCache.get(scenerySource(s.level)),scenery=entry?.loaded?entry.image:null;
+    if(scenery){
       c.drawImage(scenery,0,0,960,640);
       // Subtle clipped movements in the existing canopy retain the detailed painting.
       const ratio=(scenery.naturalWidth||scenery.width)/960;
       for(const [i,r]of [[0,[0,0,120,135]],[1,[440,0,210,120]],[2,[880,335,80,160]]]){
         const [x,y,w,h]=r,wind=Math.sin(time*.8+i)*1.1;c.save();c.beginPath();c.rect(x,y,w,h);c.clip();c.drawImage(scenery,x*ratio,y*ratio,w*ratio,h*ratio,x+wind,y,w,h);c.restore();
       }
-      if(s.level===1){rect(c,0,0,960,640,'#153d3524');for(let i=0;i<10;i++){const x=100+i*70,y=126+(i%3)*9;rect(c,x,y,3,10,'#c8bca0');oval(c,x+1,y-1,7,4,'#bd94c7',1);}}
-      if(s.level===2){rect(c,0,0,960,640,'#6b76951a');for(let i=0;i<14;i++){rect(c,290+i*25,30,23,13,i%2?'#8c9990':'#b0b5a2');rect(c,292+i*25,32,19,1,'#d7d8bd');}}
       for(let i=0;i<4;i++)rect(c,132+i*20+Math.sin(time*.6+i)*3,67+(i%2)*13,10,1,'#d5edda66');
     }else{drawGround(c,s.level);pond(c,time);trees.forEach(([x,y],i)=>tree(c,x,y,s.level,time,i));bushes(c,time);architecture(c,s.level,time);}
     for(const p of s.plots)flower(c,p,time,night);for(const t of s.structures)structure(c,t,time);
@@ -411,5 +416,5 @@
     }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,bossAttack,character,sprite,blackCat,createCat,updateCat,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false),root.SnailCat?.ready||Promise.resolve(false),root.SnailBosses?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
+  root.SnailArt={garden,bossAttack,character,sprite,blackCat,createCat,updateCat,get ready(){return Promise.all([Promise.all([0,1,2].map(loadScenery)).then(results=>results.every(Boolean)),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false),root.SnailCat?.ready||Promise.resolve(false),root.SnailBosses?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
 })(globalThis);
