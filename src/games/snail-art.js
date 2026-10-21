@@ -230,10 +230,9 @@
     }
     if(night)for(let i=0;i<4;i++){const x=(time*6+i*287)%1320-180,y=230+i*88+Math.sin(time*.3+i)*12;c.save();c.translate(x,y);c.scale(2.8,.24);const fog=c.createRadialGradient(0,0,5,0,0,110);fog.addColorStop(0,'#bdcad623');fog.addColorStop(.55,'#b2c0cd12');fog.addColorStop(1,'#b2c0cd00');c.fillStyle=fog;c.fillRect(-110,-110,220,220);c.restore();}
   }
-  // Decorative visitor: derived only from elapsed active play time, never saved in the simulation.
-  function gardenCat(s,time,origin=null){
-    if(!Number.isFinite(time)||time<10)return null;
-    const cycle=Math.floor(time/10)-1,age=time%10,seed=cycle*137+s.level*977;
+  // Find a safe initial position once; all subsequent movement is continuous.
+  function catStart(s,origin=s.player){
+    const seed=s.level*977;
     const obstacles=[...s.plots.filter(p=>p.unlocked),...s.structures];
     for(let i=0;i<80;i++){
       const nearby=origin&&i<60;
@@ -244,16 +243,61 @@
       const vx=target.x-x,vy=target.y-y,length=vx*vx+vy*vy;
       if(origin&&Math.hypot(x-origin.x,y-origin.y)<42)continue;
       if(obstacles.some(o=>{const t=length?Math.max(0,Math.min(1,((o.x-x)*vx+(o.y-y)*vy)/length)):0;return Math.hypot(o.x-x-vx*t,o.y-y-vy*t)<42;}))continue;
-      const progress=motion?.matches?0:Math.max(0,Math.min(1,(age-3)/4));
-      return {x:x+vx*progress,y:y+vy*progress,walking:!motion?.matches&&age>=3&&age<7,facing:vx<0?-1:1,age,cycle};
+      return {x,y,facing:vx<0?-1:1};
     }
     return null; // A completely occupied garden has no safe visiting place.
   }
+  function createCat(s){
+    const point=catStart(s);if(!point)return null;
+    return {...point,mode:'sit',age:0,remaining:4,decision:0,target:null,walking:false};
+  }
+  function catRouteClear(s,a,b){
+    const dx=b.x-a.x,dy=b.y-a.y,length=dx*dx+dy*dy;
+    return ![...s.plots.filter(p=>p.unlocked),...s.structures].some(o=>{
+      const t=length?Math.max(0,Math.min(1,((o.x-a.x)*dx+(o.y-a.y)*dy)/length)):0;
+      return Math.hypot(o.x-a.x-dx*t,o.y-a.y-dy*t)<42;
+    });
+  }
+  function nextCatAction(cat,s){
+    const sequence=['walk','play','sit','walk','groom','sleep','walk','sit','play','sleep'];
+    const decision=cat.decision++,mode=sequence[decision%sequence.length],roll=hash(decision+17,s.level+51);
+    cat.mode=mode;cat.age=0;cat.walking=false;cat.target=null;
+    cat.remaining=mode==='sleep'?22+roll*18:mode==='sit'?5+roll*6:mode==='groom'?6+roll*4:5+roll*3;
+    if(mode!=='walk')return;
+    for(let i=0;i<48;i++){
+      const angle=hash(decision*71+i*17,s.level+33)*Math.PI*2,distance=55+hash(i*19,decision+13)*95;
+      const target={x:Math.max(140,Math.min(820,cat.x+Math.cos(angle)*distance)),y:Math.max(205,Math.min(520,cat.y+Math.sin(angle)*distance))};
+      if(M.dist(cat,target)<35||!catRouteClear(s,cat,target))continue;
+      cat.target=target;cat.walking=true;cat.facing=target.x<cat.x?-1:1;cat.remaining=M.dist(cat,target)/24;return;
+    }
+    cat.mode='sit';cat.remaining=5;
+  }
+  function updateCat(cat,s,elapsed){
+    if(!cat||s.over||motion?.matches||!Number.isFinite(elapsed)||elapsed<=0)return;
+    let left=Math.min(elapsed,30);
+    while(left>1e-8){
+      if(cat.remaining<=1e-8)nextCatAction(cat,s);
+      const dt=Math.min(.1,left,cat.remaining);left-=dt;cat.remaining-=dt;cat.age+=dt;
+      if(cat.mode==='walk'&&cat.target){
+        const distance=M.dist(cat,cat.target),step=Math.min(distance,24*dt),next={x:cat.x+(cat.target.x-cat.x)/Math.max(distance,.001)*step,y:cat.y+(cat.target.y-cat.y)/Math.max(distance,.001)*step};
+        if(catRouteClear(s,cat,next)){cat.x=next.x;cat.y=next.y;}
+        else{cat.mode='sit';cat.walking=false;cat.target=null;cat.remaining=2;cat.age=0;}
+      }
+    }
+  }
   function blackCat(c,cat){
     if(!cat)return;
-    const {x,y,facing,walking,age}=cat,step=walking?Math.sin(age*14):0;
+    const {x,y,facing,walking,age}=cat,step=walking?Math.sin(age*14):0,playing=cat.mode==='play',grooming=cat.mode==='groom';
     c.save();c.translate(Math.round(x),Math.round(y));c.scale(facing,1);
+    if(playing)c.translate(0,-Math.abs(Math.sin(age*5))*2);
     oval(c,0,2,16,5,'#17261f66',1);
+    if(cat.mode==='sleep'){
+      const breath=motion?.matches?0:Math.sin(age*1.5)*.6;
+      oval(c,0,-5,17,8+breath,'#11171e',1);oval(c,2,-7,12,5,'#26313b',1);oval(c,13,-5,7,5,'#202a34',1);
+      rect(c,10,-14,3,6,'#11171e');rect(c,17,-13,2,5,'#11171e');rect(c,11,-6,3,1,'#829183');rect(c,17,-6,2,1,'#829183');
+      oval(c,-8,-2,8,5,'#34413f',1);oval(c,-8,-3,6,3,'#11171e',1);rect(c,13,-1,8,2,'#42504e');
+      c.restore();return;
+    }
     // Fine charcoal pixels, cool reflected light, pointed ears and a curled tail.
     if(!walking){
       rect(c,-15,-13,3,11,'#11171e');rect(c,-18,-16,5,4,'#1c2530');rect(c,-17,-18,3,3,'#42504e');rect(c,-14,-5,7,5,'#11171e');
@@ -264,16 +308,18 @@
       oval(c,-2,-10,13,7,'#11171e',1);oval(c,-3,-12,11,5,'#26313b',1);rect(c,-9,-16,13,2,'#42504e');
       for(const [lx,offset]of [[-10,step],[4,-step]]){rect(c,lx,-7,4,8+offset*2,'#11171e');rect(c,lx-1,1+offset*2,6,2,'#34413f');}
     }
-    const hx=walking?10:0,hy=walking?-21+Math.abs(step):-26;
+    const hx=walking?10:0,hy=walking?-21+Math.abs(step):grooming?-19+Math.sin(age*5)*2:-26;
     oval(c,hx,hy,8,7,'#11171e',1);oval(c,hx+1,hy,6,5,'#2b3540',1);
     for(const ex of [-7,4]){rect(c,hx+ex,hy-12,3,9,'#11171e');rect(c,hx+ex+1,hy-10,1,5,'#66565c');}
     rect(c,hx-4,hy-2,3,2,'#bdce78');rect(c,hx+3,hy-2,3,2,'#bdce78');rect(c,hx-3,hy-2,1,2,'#11171e');rect(c,hx+4,hy-2,1,2,'#11171e');
     rect(c,hx,hy+2,2,1,'#b58b90');rect(c,hx-2,hy+4,5,1,'#42504e');
     rect(c,hx-12,hy+2,6,1,'#87968b');rect(c,hx+7,hy+2,6,1,'#87968b');
     rect(c,hx-11,hy+5,5,1,'#42504e');rect(c,hx+7,hy+5,5,1,'#42504e');
+    if(playing){const paw=Math.sin(age*7)*5;rect(c,8+paw,-13,9,4,'#34413f');rect(c,15+paw,-12,4,3,'#65746b');}
+    if(grooming){rect(c,2,-24,4,10,'#34413f');rect(c,2,-25,4,3,'#829183');}
     c.restore();
   }
-  function garden(c,s,time=0,input={},effects=[],catTime=time,catOrigin=null){
+  function garden(c,s,time=0,input={},effects=[],cat=null){
     const effectTime=time;
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
     loadScenery();
@@ -291,7 +337,7 @@
     for(const p of s.plots)flower(c,p,time,night);for(const t of s.structures)structure(c,t,time);
     atmosphere(c,s,time);
     for(const n of s.snails)snail(c,n,time,night);
-    const cat=gardenCat(s,catTime,catOrigin);if(cat&&cat.y<=s.player.y)blackCat(c,cat);
+    if(cat&&cat.y<=s.player.y)blackCat(c,cat);
     character(c,s.character,s.player.x,s.player.y,time,Math.hypot(input.x||0,input.y||0)>.1,s.player,{water:s.lastAction>0});
     if(cat&&cat.y>s.player.y)blackCat(c,cat);
     if(s.weapon&&s.weapon!=='hoe'&&!s.attackFlash&&!s.lastAction)root.SnailExtras?.draw(c,s.weapon,s.player.x+s.player.dx*20,s.player.y-9+s.player.dy*6,30);
@@ -310,5 +356,5 @@
     }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,character,sprite,gardenCat,blackCat,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
+  root.SnailArt={garden,character,sprite,blackCat,createCat,updateCat,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
 })(globalThis);

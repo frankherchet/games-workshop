@@ -119,3 +119,7 @@ Alle zehn Sekunden aktiver Spielzeit besucht genau eine schwarze Pixelkatze eine
 ### V0.9.1 · Katzenbesuch sichtbar ab Spielstart
 
 Die Katze ist ab dem Betreten oder Fortsetzen sichtbar. Ihr Zehn-Sekunden-Timer verwendet echte aktive Zeit statt des auf 50 ms je Bild begrenzten Simulationsschritts. Pause und Shop bleiben ausgenommen. Neue Besucherpositionen werden bevorzugt in der Nähe der Figur gesucht; der Bezugspunkt bleibt während eines Besuchs stabil, damit die Katze beim Laufen der Figur nicht springt. Freie Wege, unveränderte Ressourcen und der bestehende Spielstand bleiben erhalten.
+
+### V0.10 · Natürliches Katzenleben
+
+Die Katze behält während einer Partie ihre Position und läuft mit 24 Garteneinheiten pro Sekunde auf freien Wegen. Sie wird nicht mehr alle zehn Sekunden neu platziert. Sitzpausen, spielerisches Pföteln und kleine Hüpfer, Fellpflege und 22–40 Sekunden lange Liegepausen wechseln sich ab. Beim Schlafen sind ihre Augen geschlossen und der Körper bewegt sich leicht mit der Atmung. Neue Hindernisse stoppen die Katze, statt sie zu versetzen. Sie bleibt rein dekorativ, pausiert mit dem Spiel und wird beim Fortsetzen neu initialisiert. Bestehende Spielstände und die Spielbalance bleiben erhalten. Diese Version ersetzt das frühere Zehn-Sekunden-Besuchsverhalten.
