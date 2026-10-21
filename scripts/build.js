@@ -2,14 +2,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
-const order = ['core.js', 'catalog.js', 'art.js', 'session.js', 'fullscreen.js', 'games/breakout.js', 'games/memory.js', 'games/runner.js', 'games/snail-model.js', 'games/snail-view.js', 'games/snail-sprites.js', 'games/snail-extras.js', 'games/snail-defenses.js', 'games/snail-art.js', 'games/snail-game.js', 'games/pferdezauber-world.js', 'games/pferdezauber.js', 'games/frogger-levels.js', 'games/frogger-model.js', 'games/frogger-art.js', 'games/frogger-game.js', 'feedback.js', 'app.js'];
+const order = ['core.js', 'catalog.js', 'art.js', 'session.js', 'fullscreen.js', 'games/breakout.js', 'games/memory.js', 'games/runner.js', 'games/snail-model.js', 'games/snail-view.js', 'games/snail-sprites.js', 'games/snail-extras.js', 'games/snail-defenses.js', 'games/snail-bosses.js', 'games/snail-cat.js', 'games/snail-art.js', 'games/snail-game.js', 'games/pferdezauber-world.js', 'games/pferdezauber.js', 'games/frogger-levels.js', 'games/frogger-model.js', 'games/frogger-art.js', 'games/frogger-game.js', 'feedback.js', 'app.js'];
 const html = fs.readFileSync(path.join(root, 'src/index.html'), 'utf8');
 const css = ['style.css', 'feedback.css', 'games/snail-style.css', 'games/snail-refined.css', 'fullscreen.css', 'games/snail-interaction.css', 'games/pferdezauber-style.css', 'games/frogger-style.css'].map(file => fs.readFileSync(path.join(root, 'src', file), 'utf8')).join('\n');
-const sourceAssets={garden:'garden-fine-v3.png',sprites:'garden-sprites-v4.png',defenses:'garden-defenses-v6.png',extras:'garden-extras-v7.png'};
+const sourceAssets={garden:'garden-fine-v3.png',sprites:'garden-sprites-v4.png',defenses:'garden-defenses-v6.png',extras:'garden-extras-v7.png',cat:'garden-cat-v12.png',bosses:'garden-bosses-v12.png'};
 const assets=Object.entries(sourceAssets).map(([key,file])=>{
  const data=fs.readFileSync(path.join(root,'src/assets',file));
  const hash=crypto.createHash('sha256').update(data).digest('hex').slice(0,12);
- const prefix=key==='garden'?'garden-fine':key==='sprites'?'garden-sprites':key==='defenses'?'garden-defenses':'garden-extras';
+ const prefix=key==='garden'?'garden-fine':key==='sprites'?'garden-sprites':key==='defenses'?'garden-defenses':key==='cat'?'garden-cat':key==='bosses'?'garden-bosses':'garden-extras';
  return {key,data,url:`assets/${prefix}-${hash}.png`,name:`${prefix}-${hash}.png`};
 });
 const build=crypto.createHash('sha256').update(html+css+order.map(file=>fs.readFileSync(path.join(root,'src',file),'utf8')).join('')+assets.map(a=>a.url).join('')).digest('hex').slice(0,12);

@@ -58,7 +58,7 @@
       player: { x: 465, y: 510, dx: 0, dy: -1 },
       plots: Array.from({ length: PLOT_COUNT }, (_, i) => ({ ...plotPosition(i), unlocked: i < 9, type: i < 6 ? 'daisy' : null, hp: i < 6 ? 3 : 0, watered: false, dry: 0 })),
       inventory: { hoe:1,rake:0,mallet:0,sickle:0,thorn:0,resin:0,lantern:0,daisy: 3, tulip: 0, moon: 0, crystal: 0, pit: 0, beer: 0, fence: 0, electric: 0, copper: 0, duck: 0, food: 1 },
-      coinEvents: [], structures: [], snails: [], spawned: 0, waveTotal: 0, spawnClock: 0, nextId: 1, over: false, reason: '',
+      bossAttacks: [], coinEvents: [], structures: [], snails: [], spawned: 0, waveTotal: 0, spawnClock: 0, nextId: 1, over: false, reason: '',
       notice: 'Gieße deine sechs Sonnensterne. Der Stand steht oben rechts.', lastIncome: 0, lastAction: 0, attackFlash: 0
     };
   }
@@ -67,16 +67,24 @@
     else if (s.difficulty === 'hard' && s.eaten > lossLimit(s)) { s.over = true; s.reason = `Die Verlustgrenze von ${lossLimit(s)} gefressenen Pflanzen wurde überschritten.`; }
     return s.over;
   }
+  const BOSS_DESIGNS=['Lavaglut-Nacktschnecke','Sturmritter-Nacktschnecke','Waldhüter-Nacktschnecke','Sternennebel-Nacktschnecke','Sumpfgift-Nacktschnecke','Kristall-Nacktschnecke','Moospanzer','Kristallpanzer','Inferno-König','Galaxienpanzer','Vulkanpanzer','Gewitterpanzer','Pestfürst','Sumpfpanzer'];
+  const BOSS_THEMES=['lava','storm','forest','cosmic','poison','crystal','forest','crystal','infernal','cosmic','lava','storm','poison','poison'];
+  const BOSS_ATTACKS={lava:'Lavakugel',storm:'Blitzschlag',forest:'Dornenranken',cosmic:'Sternenfall',poison:'Gifttümpel',crystal:'Kristallsplitter',infernal:'Flammenrune'};
+  const isBossNight=s=>(s.nights+1)%5===0;
+  function bossStats(s){
+    const rank=Math.floor((s.nights+1)/5),factor=s.difficulty==='easy'?.8:s.difficulty==='hard'?1.2:1;
+    return {rank,hp:Math.ceil((12+Math.max(0,rank-1)*9+s.level*4)*factor),speed:(13+Math.min(rank,8)*.5)*DIFFICULTIES[s.difficulty].speed,reward:10+rank*3,bite:2+Math.floor(rank/2)};
+  }
   function beginNight(s) {
     if (s.over || s.phase !== 'day') return false;
-    s.phase = 'night'; s.nightTime = 0; s.spawned = 0; s.spawnClock = 2; s.snails = [];
-    s.waveTotal = Math.ceil((5 + s.nights * 2 + s.level * 3) * DIFFICULTIES[s.difficulty].enemies);
+    s.bossAttacks=[];s.phase = 'night'; s.nightTime = 0; s.spawned = 0; s.spawnClock = 2; s.snails = [];
+    s.waveTotal = Math.ceil((5 + s.nights * 2 + s.level * 3) * DIFFICULTIES[s.difficulty].enemies)+(isBossNight(s)?1:0);
     for (const item of s.structures) if (item.type === 'duck') {
       item.fed = item.preFed === true || s.inventory.food > 0;
       if (item.fed && !item.preFed) s.inventory.food--;
       item.preFed = false;
     }
-    s.notice = 'Die Schnecken kommen. Hacke bereit halten!';
+    s.notice = isBossNight(s)?`Bossnacht ${s.nights+1}! Der Schneckenkönig Stufe ${bossStats(s).rank} kommt am Ende der Welle.`:'Die Schnecken kommen. Hacke bereit halten!';
     return true;
   }
   function finishNight(s) {
@@ -87,7 +95,7 @@
       else { p.dry++; if (p.dry >= 2) { p.type = null; p.hp = 0; s.dryLost++; } }
       p.watered = false;
     }
-    s.nights++; s.lastIncome = income; s.phase = 'day'; s.dayTime = 0;
+    s.bossAttacks=[];s.nights++; s.lastIncome = income; s.phase = 'day'; s.dayTime = 0;
     s.structures = s.structures.filter(item => ++item.age < ITEMS[item.type].life && item.hp > 0);
     for (const item of s.structures) if (item.type === 'duck') item.fed = false;
     s.notice = `Nacht ${s.nights} überlebt! Pflanzen bringen ${income} Münzen. Jetzt gießen und reparieren.`;
@@ -176,7 +184,7 @@
   }
   function kill(s, snail) {
     if (snail.hp <= 0) return;
-    snail.hp = 0; s.kills++; reward(s,snail.reward,snail);
+    snail.hp = 0;if(snail.type==='boss')s.bossAttacks=(s.bossAttacks||[]).filter(a=>a.source!==snail.id); s.kills++; reward(s,snail.reward,snail);
   }
   function attack(s) {
     if (s.phase !== 'night' || s.over || s.cooldown > 0) return false;
@@ -189,14 +197,50 @@
   function spawn(s, random = Math.random) {
     const tier = s.nights + s.level * 3;
     const roll = random();
-    const type = tier >= 6 && roll > .75 ? 'giant' : tier >= 3 && roll > .55 ? 'armored' : tier >= 2 && roll < .24 ? 'fast' : 'normal';
-    const stats = { normal: [1, 24, 2, 1], fast: [1, 40, 3, 1], armored: [3, 19, 4, 1], giant: [5, 16, 6, 2] }[type];
+    const boss=isBossNight(s)&&s.spawned===s.waveTotal-1,bossData=boss?bossStats(s):null;
+    const type = boss?'boss':tier >= 6 && roll > .75 ? 'giant' : tier >= 3 && roll > .55 ? 'armored' : tier >= 2 && roll < .24 ? 'fast' : 'normal';
+    const stats = { normal: [1, 24, 2, 1], fast: [1, 40, 3, 1], armored: [3, 19, 4, 1], giant: [5, 16, 6, 2],boss:bossData?[bossData.hp,bossData.speed,bossData.reward,bossData.bite]:null }[type];
     const side = Math.floor(random() * 4), along = random();
     s.snails.push({ id: s.nextId++, type, x: side === 0 ? 55 : side === 1 ? 900 : 150 + along * 650,
       y: side === 2 ? 170 : side === 3 ? 580 : 215 + along * 290,
-      hp: stats[0] + Math.floor(tier / 8), maxHp: stats[0] + Math.floor(tier / 8),
-      speed: stats[1] * DIFFICULTIES[s.difficulty].speed, reward: stats[2], bite: stats[3], timer: 0, dx: 0, dy: 1 });
-    s.spawned++;
+      hp: stats[0] + (boss?0:Math.floor(tier / 8)), maxHp: stats[0] + (boss?0:Math.floor(tier / 8)),
+      speed: stats[1] * (boss?1:DIFFICULTIES[s.difficulty].speed), reward: stats[2], bite: stats[3], timer: 0, dx: 0, dy: 1 });
+    if(boss){s.snails[s.snails.length-1].skillClock=8;s.snails[s.snails.length-1].bossDesign=Math.max(0,Math.min(BOSS_DESIGNS.length-1,Math.floor(random()*BOSS_DESIGNS.length)));}
+    s.spawned++;if(boss)s.notice=`Der Schneckenkönig ist da! Stufe ${bossData.rank} · ${bossData.hp} Lebenspunkte.`;
+  }
+  function bossAttackPattern(s,boss,target){
+    const theme=BOSS_THEMES[boss.bossDesign||0],rank=bossStats(s).rank,damage=1+Math.floor(rank/3);
+    const make=(dx,dy,radius,warning=1.8,extra={})=>({x:Math.max(115,Math.min(845,target.x+dx)),y:Math.max(190,Math.min(530,target.y+dy)),fromX:boss.x,fromY:boss.y,source:boss.id,theme,timer:warning,warning,age:0,hit:false,damage,radius,hold:1.2,pulses:1,nextTick:0,...extra});
+    if(theme==='storm')return [-48,0,48].map(dx=>make(dx,0,19,1.8));
+    if(theme==='forest')return [make(0,0,55,2,{hold:3.5})];
+    if(theme==='poison')return [make(0,0,42,2,{hold:3,pulses:3,damage:damage/3})];
+    if(theme==='crystal')return [-1,0,1].map((side,i)=>make(side*42,Math.abs(side)*24,21,1.8+i*.2));
+    if(theme==='cosmic')return [make(0,0,65,2.8)];
+    if(theme==='infernal')return [[0,0],[-52,0],[52,0],[0,-52],[0,52]].map(([dx,dy])=>make(dx,dy,19,2.3));
+    return [make(0,0,55,1.8)];
+  }
+  function updateBossAttacks(s,dt,random){
+    if(!Array.isArray(s.bossAttacks))s.bossAttacks=[];
+    for(const a of s.bossAttacks){
+      a.age+=dt;a.timer-=dt;
+      const pulses=a.pulses===undefined?(a.hit?0:1):a.pulses;
+      if(pulses>0&&a.timer<=(a.nextTick||0)){
+        a.hit=true;a.pulses=pulses-1;a.nextTick=(a.nextTick||0)-1;
+        for(const p of living(s))if(dist(p,a)<=a.radius){p.hp=Math.max(0,p.hp-a.damage);if(p.hp<=0){p.type=null;s.eaten++;}}
+        for(const t of s.structures)if(t.type!=='duck'&&dist(t,a)<=a.radius)t.hp=Math.max(0,t.hp-a.damage*5);
+      }
+    }
+    s.bossAttacks=s.bossAttacks.filter(a=>a.timer> -(a.hold||1.2)&&s.snails.some(n=>n.id===a.source&&n.hp>0));
+    for(const boss of s.snails){
+      if(boss.type!=='boss'||boss.hp<=0)continue;
+      boss.skillClock=(Number.isFinite(boss.skillClock)?boss.skillClock:8)-dt;
+      if(boss.skillClock>0)continue;
+      const plants=living(s);if(!plants.length)continue;
+      const target=plants[Math.min(plants.length-1,Math.max(0,Math.floor(random()*plants.length)))],theme=BOSS_THEMES[boss.bossDesign||0];
+      const rank=bossStats(s).rank;
+      s.bossAttacks.push(...bossAttackPattern(s,boss,target));
+      boss.skillClock=Math.max(7,13-rank*.35);s.notice=`${BOSS_ATTACKS[theme]}! Achte auf die markierten Stellen im Garten.`;
+    }
   }
   function updateDucks(s,dt){
     for(const item of s.structures){
@@ -219,13 +263,14 @@
     let mx = input.x || 0, my = input.y || 0, length = Math.hypot(mx, my);
     if (length > 1) { mx /= length; my /= length; }
     if (length > .08) { s.player.dx = mx / Math.hypot(mx, my); s.player.dy = my / Math.hypot(mx, my); }
-    s.player.x = Math.max(90, Math.min(870, s.player.x + mx * 165 * dt));
-    s.player.y = Math.max(185, Math.min(555, s.player.y + my * 165 * dt));
+    const hazardSlow=(s.bossAttacks||[]).some(a=>a.theme==='forest'&&a.hit&&dist(a,s.player)<=a.radius)?.55:1;
+    s.player.x = Math.max(90, Math.min(870, s.player.x + mx * 165 * hazardSlow * dt));
+    s.player.y = Math.max(185, Math.min(555, s.player.y + my * 165 * hazardSlow * dt));
     if (s.phase === 'day') { s.dayTime += dt;updateDucks(s,dt); if (s.dayTime >= 180) beginNight(s); return; }
     s.nightTime += dt; s.spawnClock = Math.max(0, s.spawnClock - dt);
     if (s.spawned < s.waveTotal && s.spawnClock <= 0) { spawn(s, random); s.spawnClock = Math.max(1.25, 4 - s.nights * .14 - s.level * .25); }
-    for(const item of s.structures)if(item.type==='thorn')item.timer=Math.max(0,(item.timer||0)-dt);
-    updateDucks(s,dt);
+    for(const item of s.structures)if(['thorn','pit','beer','electric','lantern'].includes(item.type))item.timer=Math.max(0,(item.timer||0)-dt);
+    updateDucks(s,dt);updateBossAttacks(s,dt,random);
     for (const snail of s.snails) {
       if (snail.hp <= 0) continue;
       let plants = living(s); if (!plants.length) break;
@@ -239,7 +284,13 @@
         if (item.type === 'copper' && distance < 65) multiplier = Math.min(multiplier,.35);
         if(item.type==='resin'&&distance<75)multiplier=Math.min(multiplier,.2);
         if (distance > 30) continue;
-        if (['pit', 'beer', 'electric','lantern'].includes(item.type) && item.charges > 0) { item.charges--; kill(s, snail); if (!item.charges) item.hp = 0; break; }
+        if (['pit', 'beer', 'electric','lantern'].includes(item.type) && item.charges > 0) {
+          if(snail.type==='boss'){
+            if(item.timer>0)continue;item.charges--;item.timer=.9;const damage=item.type==='electric'?4:item.type==='pit'?3:2;
+            if(snail.hp<=damage)kill(s,snail);else snail.hp-=damage;if(!item.charges)item.hp=0;
+          }else{item.charges--;kill(s,snail);if(!item.charges)item.hp=0;}
+          break;
+        }
         if(item.type==='thorn'&&item.charges>0&&item.timer<=0){item.charges--;item.timer=1.1;if(snail.hp<=1)kill(s,snail);else snail.hp--;if(!item.charges)item.hp=0;}
         if (item.type === 'fence') { blocked = true; item.hp = Math.max(0, item.hp - dt * (5 + snail.bite * 3)); }
       }
@@ -251,7 +302,7 @@
       } else if (!lure) {
         snail.timer -= dt;
         if (snail.timer <= 0) {
-          const victims = snail.type === 'giant' ? plants.filter(p => dist(p, target) <= 85) : [target];
+          const victims = ['giant','boss'].includes(snail.type) ? plants.filter(p => dist(p, target) <= 85) : [target];
           for (const p of victims) { p.hp = Math.max(0, p.hp - snail.bite); if (p.hp <= 0) { p.type = null; s.eaten++; } }
           snail.timer = 2.6;
         }
@@ -282,7 +333,7 @@
         s.weapon=s.weapon||'hoe';if(!WEAPONS[s.weapon]||!s.inventory?.[s.weapon])continue;
         if (!s.inventory || !Object.keys({...PLANTS,...ITEMS,...WEAPONS}).every(k=>Number.isInteger(s.inventory[k]) && s.inventory[k]>=0 && s.inventory[k]<100000)) continue;
         if (!Array.isArray(s.structures) || s.structures.length>200 || !s.structures.every(t=>ITEMS[t.type] && t.type!=='food' && finite(t,['x','y','hp','charges','age','id']) && Number.isFinite(t.timer))) continue;
-        if (!Array.isArray(s.snails) || s.snails.length>1000 || !s.snails.every(n=>['normal','fast','armored','giant'].includes(n.type) && finite(n,['x','y','hp','maxHp','speed','reward','bite','id']) && Number.isFinite(n.timer) && Number.isFinite(n.dx) && Number.isFinite(n.dy))) continue;
+        if (!Array.isArray(s.snails) || s.snails.length>1000 || !s.snails.every(n=>['normal','fast','armored','giant','boss'].includes(n.type) && (n.type!=='boss'||n.bossDesign===undefined||(Number.isInteger(n.bossDesign)&&n.bossDesign>=0&&n.bossDesign<BOSS_DESIGNS.length)) && finite(n,['x','y','hp','maxHp','speed','reward','bite','id']) && Number.isFinite(n.timer) && Number.isFinite(n.dx) && Number.isFinite(n.dy))) continue;
         if(s.version===1){
           // Retain existing plants, water, HP and unlocks; add empty expansion plots.
           const old=s.plots;
@@ -290,7 +341,10 @@
           s.version=2;
         }
         if(s.version<3){let open=s.plots.filter(p=>p.unlocked).length;for(const p of s.plots)if(open<9&&!p.unlocked&&!s.structures.some(t=>dist(t,p)<34)){p.unlocked=true;open++;}s.version=3;}
-        s.version=4;
+        if(s.bossAttacks===undefined)s.bossAttacks=[];
+        if(!Array.isArray(s.bossAttacks)||s.bossAttacks.length>12||!s.bossAttacks.every(a=>finite(a,['x','y','fromX','fromY','source','age','damage','radius'])&&a.radius<=100&&a.damage<=100000&&BOSS_ATTACKS[a.theme]&&Number.isFinite(a.timer)&&a.timer>=-5&&a.timer<=4&&typeof a.hit==='boolean'&&['hold','warning','pulses'].every(k=>a[k]===undefined||(Number.isFinite(a[k])&&a[k]>=0&&a[k]<=5))&&(a.nextTick===undefined||(Number.isFinite(a.nextTick)&&a.nextTick>=-3&&a.nextTick<=0))))continue;
+        if(s.snails.some(n=>n.type==='boss'&&n.skillClock!==undefined&&(!Number.isFinite(n.skillClock)||n.skillClock<0||n.skillClock>30)))continue;
+        s.version=4;for(const n of s.snails)if(n.type==='boss'&&n.bossDesign===undefined)n.bossDesign=0;
         s.coinEvents=[]; // Effects are transient and never replay after restoring.
         s.over = Boolean(s.over); s.reason = typeof s.reason === 'string' ? s.reason.slice(0,250) : ''; s.notice = typeof s.notice === 'string' ? s.notice.slice(0,250) : '';
         result.runs[`${level}:${difficulty}`] = s;
@@ -298,7 +352,7 @@
       return result;
     } catch { return null; }
   }
-  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, newRun, beginNight, finishNight, buy, tend, plant, place, duckFed, feedDuck, relocate, repair, attack, spawn, step, campaign, record, parseSave };
+  const model = { PLOT_COUNT, expansionPrice, WEAPONS, LEVELS, DIFFICULTIES, PLANTS, ITEMS, dist, price, living, lossLimit, cooldown, phaseName, BOSS_THEMES, BOSS_ATTACKS, BOSS_DESIGNS, isBossNight, bossStats, bossAttackPattern, newRun, beginNight, finishNight, buy, tend, plant, place, duckFed, feedDuck, relocate, repair, attack, spawn, step, campaign, record, parseSave };
   root.SnailModel = model;
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
 })(globalThis);

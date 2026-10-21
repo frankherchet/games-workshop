@@ -87,3 +87,6 @@ test('Reduced motion renders a fixed cat pose even when its animation age differ
  const sandbox={SnailModel:M,matchMedia:()=>({matches:true})};vm.runInNewContext(fs.readFileSync('src/games/snail-art.js','utf8'),sandbox);
  for(const mode of ['walk','play','groom','sleep']){const cat={...sandbox.SnailArt.createCat(M.newRun()),mode,age:1},a=canvas(),b=canvas();sandbox.SnailArt.blackCat(a.ctx,cat,true);sandbox.SnailArt.blackCat(b.ctx,{...cat,age:3},true);assert.equal(a.result().hash,b.result().hash);}
 });
+test('Every elemental boss attack renders its warning and impact with valid colors',()=>{
+ for(const theme of Object.keys(M.BOSS_ATTACKS))for(const hit of [false,true]){const c=canvas();global.SnailArt.bossAttack(c.ctx,{theme,hit,x:400,y:300,fromX:700,fromY:450,age:hit?2:1,timer:hit?-.2:.8,radius:42});c.result();}
+});

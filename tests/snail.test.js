@@ -182,3 +182,53 @@ test('Invalid destinations, remote traps and nighttime relocation never change o
  for(const p of [{x:512,y:480},{x:310,y:245},{x:850,y:530},{x:NaN,y:480},null]){assert.equal(M.relocate(s,91,p),false);assert.equal(JSON.stringify(s.structures),original);}
  s.player.x=90;assert.equal(M.relocate(s,91,{x:128,y:480}),false);s.player.x=465;M.beginNight(s);assert.equal(M.relocate(s,91,{x:480,y:480}),false);assert.equal(JSON.stringify(s.structures),original);
 });
+test('Exactly one boss accompanies every fifth night, only as the final enemy',()=>{
+ for(const nights of [0,3,4,5,8,9,14]){
+  const s=M.newRun();s.nights=nights;M.beginNight(s);const normalTotal=Math.ceil((5+nights*2)*M.DIFFICULTIES.medium.enemies);assert.equal(s.waveTotal,normalTotal+((nights+1)%5===0?1:0));
+  while(s.spawned<s.waveTotal)M.spawn(s,()=>.4);
+  const bosses=s.snails.filter(n=>n.type==='boss');assert.equal(bosses.length,(nights+1)%5===0?1:0);if(bosses.length){assert.equal(s.snails.at(-1).type,'boss');assert.ok(bosses[0].hp>s.snails[0].hp);}
+ }
+});
+test('Each later boss is stronger, with easier and harder difficulty scaling',()=>{
+ const stats=[];for(const nights of [4,9,14,19]){const s=M.newRun();s.nights=nights;stats.push(M.bossStats(s));}
+ for(let i=1;i<stats.length;i++){assert.ok(stats[i].hp>stats[i-1].hp);assert.ok(stats[i].bite>=stats[i-1].bite);assert.ok(stats[i].reward>stats[i-1].reward);}
+ const easy=M.newRun(0,'easy'),hard=M.newRun(0,'hard');easy.nights=hard.nights=4;assert.ok(M.bossStats(easy).hp<M.bossStats(hard).hp);
+});
+test('Boss survives a trap hit, respects trap cooldown and persists with exact HP on restore',()=>{
+ const s=M.newRun();s.nights=4;M.beginNight(s);s.spawned=s.waveTotal-1;M.spawn(s,()=>.4);const boss=s.snails[0];Object.assign(boss,{x:700,y:450});s.structures=[{id:90,type:'electric',x:700,y:450,hp:1,charges:5,age:0,timer:0}];
+ const hp=boss.hp;M.step(s,.01);assert.equal(boss.hp,hp-4);assert.equal(s.structures[0].charges,4);M.step(s,.01);assert.equal(boss.hp,hp-4);assert.equal(s.structures[0].charges,4);assert.equal(s.phase,'night');
+ const r=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.equal(r.snails[0].type,'boss');assert.equal(r.snails[0].hp,boss.hp);assert.equal(r.snails[0].maxHp,hp);assert.equal(r.spawned,r.waveTotal);
+});
+test('Boss kill pays once, and surviving boss prevents the night from finishing',()=>{
+ const s=M.newRun();s.nights=4;M.beginNight(s);s.spawned=s.waveTotal-1;M.spawn(s,()=>.4);const boss=s.snails[0];assert.equal(M.finishNight(s),false);
+ s.player={x:700,y:450,dx:1,dy:0};Object.assign(boss,{x:720,y:450,hp:1});const money=s.money,reward=boss.reward;M.attack(s);assert.equal(s.money,money+reward);s.cooldown=0;M.attack(s);assert.equal(s.money,money+reward);M.step(s,.01);assert.equal(s.nights,5);assert.equal(s.phase,'day');
+});
+test('All fourteen boss designs are randomly reachable and have identical stats at the same rank',()=>{
+ const bosses=[];
+ for(let design=0;design<14;design++){const s=M.newRun();s.nights=9;M.beginNight(s);s.spawned=s.waveTotal-1;M.spawn(s,()=> (design+.1)/14);const b=s.snails[0];assert.equal(b.bossDesign,design);bosses.push(b);}
+ for(const b of bosses)for(const key of ['hp','maxHp','speed','reward','bite'])assert.equal(b[key],bosses[0][key]);assert.equal(M.BOSS_DESIGNS.length,14);
+});
+test('Boss design is kept across save and subsequent bosses grow regardless of random appearance',()=>{
+ const s=M.newRun();s.nights=4;M.beginNight(s);s.spawned=s.waveTotal-1;M.spawn(s,()=>.99);const first=s.snails[0],r=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.equal(first.bossDesign,13);assert.equal(r.snails[0].bossDesign,13);
+ const later=M.newRun();later.nights=9;M.beginNight(later);later.spawned=later.waveTotal-1;M.spawn(later,()=>0);assert.equal(later.snails[0].bossDesign,0);assert.ok(later.snails[0].hp>first.hp);assert.ok(later.snails[0].bite>first.bite);
+});
+function bossEncounter(design=0){const s=M.newRun();s.nights=4;M.beginNight(s);s.spawned=s.waveTotal-1;M.spawn(s,()=>0);Object.assign(s.snails[0],{bossDesign:design,x:800,y:520,speed:0});return s;}
+test('All themed attacks have a visible warning before damage and different mechanical patterns',()=>{
+ const counts={lava:1,storm:3,forest:1,cosmic:1,poison:1,crystal:3,infernal:5};
+ for(let design=0;design<14;design++){
+  const s=bossEncounter(design);for(let i=0;i<200&&!s.bossAttacks.length;i++)M.step(s,.05,{},()=>0);assert.equal(s.bossAttacks.length,counts[M.BOSS_THEMES[design]]);
+  const warning=Math.min(...s.bossAttacks.map(a=>a.timer));assert.ok(warning>=1.8);assert.ok(s.bossAttacks.every(a=>a.theme===M.BOSS_THEMES[design]&&!a.hit));
+  for(let i=0;i<Math.floor((warning-.1)/.05);i++)M.step(s,.05,{},()=>0);assert.equal(s.plots[0].hp,3);
+  for(let i=0;i<9;i++)M.step(s,.05,{},()=>0);assert.ok(s.plots[0].hp<3,M.BOSS_THEMES[design]);
+ }
+});
+test('Boss attack warning and cooldown survive reload, and killing a boss cancels pending attacks',()=>{
+ const s=bossEncounter(9);for(let i=0;i<200&&!s.bossAttacks.length;i++)M.step(s,.05,{},()=>0);M.step(s,.05,{},()=>0);const r=M.parseSave(JSON.stringify(M.record(M.campaign(),s))).runs['0:medium'];assert.deepEqual(r.bossAttacks,s.bossAttacks);assert.equal(r.snails[0].skillClock,s.snails[0].skillClock);
+ const boss=r.snails[0];r.player={x:boss.x-20,y:boss.y,dx:1,dy:0};boss.hp=1;M.attack(r);assert.equal(r.bossAttacks.length,0);M.step(r,.05);assert.equal(r.plots[0].hp,3);
+});
+
+test('Poison damages over time, forest roots slow movement, and boss death ends hazards',()=>{
+ const s=bossEncounter(4);for(let i=0;i<200&&!s.bossAttacks.length;i++)M.step(s,.05,{},()=>0);for(let i=0;i<41;i++)M.step(s,.05,{},()=>0);const first=s.plots[0].hp;assert.ok(first<3&&first>2.5);for(let i=0;i<42;i++)M.step(s,.05,{},()=>0);assert.ok(Math.abs(s.plots[0].hp-2)<1e-8);
+ const roots=bossEncounter(2),plain=JSON.parse(JSON.stringify(roots));roots.bossAttacks=M.bossAttackPattern(roots,roots.snails[0],roots.player);Object.assign(roots.bossAttacks[0],{hit:true,timer:-.1,pulses:0});const x=roots.player.x;M.step(roots,.05,{x:1});M.step(plain,.05,{x:1});assert.ok(Math.abs((roots.player.x-x)/(plain.player.x-x)-.55)<1e-8);
+ roots.player={x:roots.snails[0].x-20,y:roots.snails[0].y,dx:1,dy:0};roots.snails[0].hp=1;M.attack(roots);assert.equal(roots.bossAttacks.length,0);
+});

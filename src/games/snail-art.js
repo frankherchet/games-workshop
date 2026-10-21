@@ -170,12 +170,16 @@
     if(flip)c.restore();
   }
   function snail(c,n,time,night){
-    if(root.SnailSprites?.snail(c,n,time)){
-      if(night){const facing=n.dx<0?-1:1;for(let i=0;i<2;i++){const ex=n.x+facing*(19+i*5),ey=n.y-11-i*3;oval(c,ex,ey,4,4,'#ffd77b28',1);rect(c,ex,ey,2,2,n.type==='armored'?'#b4eef8':'#fff0bd');}}
-      if(n.maxHp>1){rect(c,n.x-15,n.y-31,30,3,'#342d3c');rect(c,n.x-15,n.y-31,30*n.hp/n.maxHp,3,'#d992a0');}
+    const detailedBoss=n.type==='boss'&&root.SnailBosses?.draw(c,n,time,!!motion?.matches);
+    if(detailedBoss||root.SnailSprites?.snail(c,n,time)){
+      if(night&&!detailedBoss){const facing=n.dx<0?-1:1;for(let i=0;i<2;i++){const ex=n.x+facing*(19+i*5),ey=n.y-11-i*3;oval(c,ex,ey,4,4,'#ffd77b28',1);rect(c,ex,ey,2,2,n.type==='armored'?'#b4eef8':'#fff0bd');}}
+      if(n.type==='boss'&&!detailedBoss){
+        const x=n.x-18,y=n.y-61;rect(c,x,y,32,6,'#8b632e');rect(c,x+2,y-6,5,8,'#d9b66b');rect(c,x+13,y-11,5,13,'#eed58b');rect(c,x+25,y-7,5,9,'#d9b66b');rect(c,x+13,y-3,4,3,'#a74967');
+      }
+      if(n.maxHp>1&&n.type!=='boss'){rect(c,n.x-15,n.y-31,30,3,'#342d3c');rect(c,n.x-15,n.y-31,30*n.hp/n.maxHp,3,'#d992a0');}
       return;
     }
-    const giant=n.type==='giant',r=giant?19:12,breath=Math.round(Math.sin(time*3+n.id)*.8),direction=n.dx<0?-1:1;
+    const giant=['giant','boss'].includes(n.type),r=n.type==='boss'?32:giant?19:12,breath=Math.round(Math.sin(time*3+n.id)*.8),direction=n.dx<0?-1:1;
     oval(c,n.x+4,n.y+10,r+13,5,'#16343145');c.save();c.translate(Math.round(n.x),Math.round(n.y));c.scale(direction,1);
     const skin=n.type==='fast'?'#b4a987':giant?'#789588':'#91a184';
     for(let i=0;i<7;i++)rect(c,-r-9+i*7,5+Math.round(Math.sin(time*6+i)*1),8,6,i%2?skin:'#698b78');
@@ -287,6 +291,7 @@
   }
   function blackCat(c,cat,night=false){
     if(!cat)return;
+    if(root.SnailCat?.draw(c,cat,night,!!motion?.matches))return;
     const mode=cat.mode||'sit',age=motion?.matches?0:cat.age||0;
     const poses={sit:[0,-11,10,14,0,-27],walk:[-2,-11,15,8,12,-23],sleep:[0,-6,18,8,14,-8],play:[0,-10,11,12,3,-25],groom:[0,-10,10,13,0,-22]};
     const blend=motion?.matches?1:Math.min(1,age/.65),ease=blend*blend*(3-2*blend);
@@ -339,6 +344,35 @@
     if(mode==='groom'){const lick=Math.sin(age*5);rect(c,hx+2,hy+5,3,7,colors[3]);oval(c,hx+3,hy+5,3,2,colors[4],1);if(lick>.4)rect(c,hx+2,hy+4,2,2,'#b5828c');}
     c.restore();
   }
+  function bossAttack(c,a){
+    const colors={lava:['#fb813e','#f9d675'],storm:['#86b6f7','#e1ebff'],forest:['#80a267','#c1d594'],cosmic:['#c397ed','#fff0c6'],poison:['#9ecb4d','#d1e794'],crystal:['#99c9ee','#dcbbf4'],infernal:['#e87d5e','#efbd73']},[base,light]=colors[a.theme]||colors.lava;
+    c.save();c.globalAlpha=a.hit?Math.max(0,1+a.timer/(a.hold||1.2)):.8;
+    if(!a.hit){
+      c.strokeStyle=base;c.lineWidth=2;c.beginPath();c.arc(a.x,a.y,a.radius,0,Math.PI*2);c.stroke();
+      for(let i=0;i<8;i++){const angle=i*Math.PI/4;rect(c,a.x+Math.cos(angle)*a.radius-2,a.y+Math.sin(angle)*a.radius-2,4,4,light);}
+      const progress=Math.max(0,Math.min(1,a.age/(a.warning||1.8))),x=a.fromX+(a.x-a.fromX)*progress,y=a.fromY+(a.y-a.fromY)*progress-Math.sin(progress*Math.PI)*65;
+      if(['lava','infernal'].includes(a.theme)){oval(c,x,y,7,7,base,1);oval(c,x-1,y-1,3,3,light,1);}
+      else if(a.theme==='cosmic')sparkle(c,x,y,5,light);
+      else if(a.theme==='crystal'){rect(c,x-2,y-6,5,12,base);rect(c,x,y-4,1,7,light);}
+      else if(a.theme==='poison')oval(c,x,y,5,7,base,1);
+      else{for(let i=0;i<4;i++)rect(c,a.x-10+i*7,a.y-15-i*3,2,8,base);}
+    }else{
+      if(a.theme==='storm'){
+        c.strokeStyle=light;c.lineWidth=3;c.beginPath();c.moveTo(a.x+8,a.y-90);for(let i=0;i<7;i++)c.lineTo(a.x+(i%2?-9:8),a.y-78+i*13);c.stroke();
+      }else if(a.theme==='forest'){
+        for(let i=0;i<8;i++){const angle=i*Math.PI/4;c.strokeStyle=base;c.lineWidth=3;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(a.x+Math.cos(angle)*a.radius,a.y+Math.sin(angle)*a.radius);c.lineTo(a.x+Math.cos(angle)*a.radius+5,a.y+Math.sin(angle)*a.radius-11);c.stroke();}
+      }else if(a.theme==='poison'){
+        oval(c,a.x,a.y,a.radius,12,base+'88',1);for(let i=0;i<6;i++)oval(c,a.x-22+i*9,a.y-5-(i%3)*7,3,4,light,1);
+      }else if(a.theme==='crystal'){
+        for(let i=0;i<10;i++){const angle=i*Math.PI/5,x=a.x+Math.cos(angle)*a.radius*.7,y=a.y+Math.sin(angle)*a.radius*.5;rect(c,x,y-12,4,18,base);rect(c,x+1,y-10,1,12,light);}
+      }else if(a.theme==='cosmic'){
+        for(let i=0;i<8;i++){const angle=i*Math.PI/4+a.age,x=a.x+Math.cos(angle)*a.radius*.8,y=a.y+Math.sin(angle)*a.radius*.5;sparkle(c,x,y,4,light);}
+      }else{
+        for(let i=0;i<9;i++){const x=a.x-30+i*7,y=a.y+(i%3)*4;oval(c,x,y-8,4,10+(i%3)*3,base,1);rect(c,x-1,y-9,2,7,light);}
+      }
+    }
+    c.restore();
+  }
   function garden(c,s,time=0,input={},effects=[],cat=null){
     const effectTime=time;
     time=motion?.matches?0:time;const night=s.phase==='night';c.imageSmoothingEnabled=false;
@@ -356,6 +390,7 @@
     }else{drawGround(c,s.level);pond(c,time);trees.forEach(([x,y],i)=>tree(c,x,y,s.level,time,i));bushes(c,time);architecture(c,s.level,time);}
     for(const p of s.plots)flower(c,p,time,night);for(const t of s.structures)structure(c,t,time);
     atmosphere(c,s,time);
+    for(const a of s.bossAttacks||[])bossAttack(c,a);
     for(const n of s.snails)snail(c,n,time,night);
     if(cat&&cat.y<=s.player.y)blackCat(c,cat,night);
     character(c,s.character,s.player.x,s.player.y,time,Math.hypot(input.x||0,input.y||0)>.1,s.player,{water:s.lastAction>0});
@@ -376,5 +411,5 @@
     }
     ambient(c,night,time);c.fillStyle='#f0dcaa';c.font='11px monospace';c.textAlign='left';c.fillText(night?'Die Hecken flüstern …':'Ein kleiner Garten. Ein großes Abenteuer.',117,632);
   }
-  root.SnailArt={garden,character,sprite,blackCat,createCat,updateCat,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
+  root.SnailArt={garden,bossAttack,character,sprite,blackCat,createCat,updateCat,get ready(){return Promise.all([loadScenery(),root.SnailSprites?.ready||Promise.resolve(false),root.SnailDefenses?.ready||Promise.resolve(false),root.SnailExtras?.ready||Promise.resolve(false),root.SnailCat?.ready||Promise.resolve(false),root.SnailBosses?.ready||Promise.resolve(false)]).then(results=>results[0]);}};
 })(globalThis);

@@ -23,8 +23,8 @@
     return cell(c,who*12+facing*3+frame,x,y,64);
   }
   function snail(c,n,time){
-    const type={normal:0,fast:1,armored:2,giant:3}[n.type]??0;
-    const size=n.type==='giant'?78:n.type==='fast'?64:56;
+    const type={normal:0,fast:1,armored:2,giant:3,boss:3}[n.type]??0;
+    const size=n.type==='boss'?132:n.type==='giant'?78:n.type==='fast'?64:56;
     c.save();c.translate(n.x,n.y+10);if(n.dx<0)c.scale(-1,1);
     const result=cell(c,36+type*3+Math.floor(time*6+n.id)%3,0,0,size,true);c.restore();return result;
   }

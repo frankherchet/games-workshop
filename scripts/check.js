@@ -9,7 +9,7 @@ if (!html.includes('lang="de"') || !html.includes('prefers-reduced-motion')) thr
 if (html.includes('<!-- SCRIPTS -->') || html.includes('<!-- STYLES -->')) throw new Error('Unresolved build marker');
 const assets=JSON.parse(fs.readFileSync('dist/assets-manifest.json','utf8'));
 for(const asset of assets){
- if(!/^assets\/(?:garden-fine|garden-sprites|garden-defenses|garden-extras)-[a-f0-9]{12}\.png$/.test(asset)||!fs.existsSync(path.join('dist',asset))||!html.includes(asset))throw new Error('Missing or unsafe game asset');
+ if(!/^assets\/(?:garden-fine|garden-sprites|garden-defenses|garden-extras|garden-cat|garden-bosses)-[a-f0-9]{12}\.png$/.test(asset)||!fs.existsSync(path.join('dist',asset))||!html.includes(asset))throw new Error('Missing or unsafe game asset');
 }
 console.log('JavaScript syntax, standalone build and accessibility defaults checked.');
 
