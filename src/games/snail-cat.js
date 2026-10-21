@@ -11,7 +11,9 @@
   ready();if(!loaded||!cat)return false;
   const mode=rows[cat.mode]===undefined?'sit':cat.mode,age=reduced?0:cat.age||0;
   const frame=reduced?0:Math.floor(age*({walk:7,play:5,groom:3,sleep:1,sit:1}[mode]))%4;
-  c.save();c.translate(Math.round(cat.x),Math.round(cat.y));c.scale(cat.facing||1,1);
+  // Keep every pose and its ground shadow at the same garden scale.
+  const size=.6;
+  c.save();c.translate(Math.round(cat.x),Math.round(cat.y));c.scale((cat.facing||1)*size,size);
   c.fillStyle=night?'#08132266':'#23352845';c.beginPath();c.ellipse(0,2,mode==='sleep'?24:18,4,0,0,Math.PI*2);c.fill();
   const smoothing=c.imageSmoothingEnabled;c.imageSmoothingEnabled=true;
   if(night&&typeof c.filter==='string')c.filter='brightness(0.72) saturate(0.75)';
