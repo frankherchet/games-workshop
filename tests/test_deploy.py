@@ -86,6 +86,20 @@ class DeploymentTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): deploy.upload(ftp, '/games', page, 'release')
             self.assertFalse(hasattr(ftp, 'fail'))
 
+    def test_new_garden_images_are_included_in_deployment(self):
+        import hashlib, json
+        with tempfile.TemporaryDirectory() as directory:
+            dist = Path(directory)
+            (dist / 'assets').mkdir()
+            names = []
+            for theme in ['forest', 'castle']:
+                data = theme.encode()
+                name = f'assets/garden-{theme}-' + hashlib.sha256(data).hexdigest()[:12] + '.png'
+                (dist / name).write_bytes(data)
+                names.append(name)
+            (dist / 'assets-manifest.json').write_text(json.dumps(names))
+            self.assertEqual(deploy.assets_for(dist), [dist / name for name in names])
+
     def test_manifest_validates_hash_and_rejects_traversal(self):
         import hashlib, json
         with tempfile.TemporaryDirectory() as directory:
@@ -141,3 +155,4 @@ class DeploymentTests(unittest.TestCase):
 
 
 if __name__ == '__main__': unittest.main()
+
