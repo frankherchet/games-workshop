@@ -35,10 +35,10 @@
       const spec=C.AIRCRAFT[type];if(!spec)throw new Error('Unbekannter Flugzeugtyp: '+type);
       this.type=type;this.id=id;this.x=x;this.y=y;this.heading=heading;
       this.speed=spec.speed;this.turnRate=spec.turn;this.radius=spec.radius;this.size=spec.size;
-      this.zoneType=spec.zone;this.color=spec.color;this.path=new FlightPath();
+      this.zoneType=spec.zone;this.color=spec.color;this.path=new FlightPath();this.hasRoute=false;
       this.entered=false;this.lastTrail=[];
     }
-    setPath(points){this.path=new FlightPath(points);}
+    setPath(points){this.path=new FlightPath(points);this.hasRoute=this.path.points.length>0;}
     move(dt){
       while(this.path.points.length&&distance(this,this.path.points[0])<Math.max(7,this.speed*dt*1.4)){
         this.path.points.shift();
@@ -210,7 +210,7 @@
         if(crash){this.lastCollision=crash.map(p=>({x:p.x,y:p.y}));this.fail('AIRCRAFT_COLLISION');break;}
         for(const plane of [...this.aircraft]){
           // Only a deliberately routed aircraft may land. Unrouted flyovers do not count.
-          if(!plane.entered||!plane.path.points.length)continue;
+          if(!plane.entered||!plane.hasRoute)continue;
           const zone=this.instance.zones.find(z=>z.accepts(plane)&&distance(z,plane)<z.radius);
           if(!zone)continue;
           this.aircraft.splice(this.aircraft.indexOf(plane),1);this.landings++;
