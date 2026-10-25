@@ -4,7 +4,7 @@ Browsergame-Plattform für **games.computersys.de**: Modern Arcade mit Pixelgraf
 
 ## Enthalten
 
-- **Fluglotse – Airport Chaos (im Entwicklungs-PR):** Eigenständiges Canvas-2D-Fluglotsenspiel mit vier Welten (Provinz, Insel, Stadt, Wüstenstadt), 48 Stages, Flugrouten per Maus/Touch, zufällig generierten Flugplätzen, zunehmend dichtem Luftverkehr und Drei-Sterne-System. Öffentliche Veröffentlichung erst nach ausdrücklicher Freigabe. Architekturentscheidungen und Arbeitspakete: [Issue #23](https://github.com/frankherchet/games-workshop/issues/23).
+- **Fluglotse – Airport Chaos:** Eigenständiges Canvas-2D-Fluglotsenspiel mit vier Welten (Provinz, Insel, Stadt, Wüstenstadt), 48 Stages, Flugrouten per Maus/Touch, zufällig generierten Flugplätzen, zunehmend dichtem Luftverkehr und Drei-Sterne-System. Architekturentscheidungen und Arbeitspakete: [Issue #23](https://github.com/frankherchet/games-workshop/issues/23).
 - **Frogger – Weltenhüpfer:** Neon-Spiel in Canvas 2D mit fünf Welten und 50 festen Levels, Verkehr, Plattformmitfahrt, Ampeln, sinkenden Blättern, Eisrutschen und Portalen. Sterne, Bestzeiten und Freischaltung werden lokal gespeichert. Tastatur, Wischen, Richtungsbuttons, Pause und Vollbild. [Spielkonzept, Implementierungsplan und Prüfstand](docs/frogger.md). Noch nicht veröffentlicht; echte iPad-/Smartphone-Abnahme und Spielbalance sind offen.
 - Responsive Startseite, Suche und Kategorien.
 - Vollbild bei allen Spielen: native Fullscreen-API mit bildschirmfüllendem Browser-Fallback, proportional angepasstem Spielfeld, erreichbarer Steuerung und Rückkehr per Button oder Escape. Die tatsächliche Anzeige auf dem iPad muss noch geprüft werden.
