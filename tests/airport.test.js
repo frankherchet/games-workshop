@@ -77,6 +77,19 @@ test('all spawn directions appear, north cannot repeat, spawn positions vary',()
   assert.ok(a.history.every(item=>C.LEVELS[3].types.includes(item.type)));
 });
 
+test('temporarily blocked entry keeps the same predetermined spawn candidate',()=>{
+  const instance=new M.StageGenerator().generate(C.stageConfig(0),555);
+  const a=new M.TrafficSpawner(instance);
+  const reference=new M.TrafficSpawner(instance);
+  const expected=reference.spawn([]);
+  const blocker=new M.PrivatePlane(123,expected.x,expected.y,0);
+  assert.equal(a.spawn([blocker]),null);
+  assert.equal(a.history.length,0);
+  const actual=a.spawn([]);
+  assert.deepEqual({x:actual.x,y:actual.y,type:actual.type},
+    {x:expected.x,y:expected.y,type:expected.type});
+});
+
 test('seed preserves spawn sequence and dynamic intervals have a lower bound',()=>{
   const instance=new M.StageGenerator().generate(C.stageConfig(7),42);
   const a=new M.TrafficSpawner(instance),b=new M.TrafficSpawner(instance);
