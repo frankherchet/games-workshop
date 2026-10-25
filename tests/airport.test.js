@@ -17,6 +17,12 @@ test('48 stages across four progressively harder worlds',()=>{
   }
   assert.deepEqual(C.LEVELS.map(x=>x.types.length),[2,3,4,5]);
   assert.ok(C.stageConfig(11).initialSpawnInterval<C.stageConfig(0).initialSpawnInterval);
+  for(let level=0;level<4;level++)for(let stage=1;stage<12;stage++){
+    const previous=C.stageConfig(level*12+stage-1);
+    const next=C.stageConfig(level*12+stage);
+    assert.ok(next.initialSpawnInterval<=previous.minimumSpawnInterval,
+      'Spawn interval must not become longer after advancing one stage');
+  }
   assert.throws(()=>C.stageConfig(48),RangeError);
 });
 
