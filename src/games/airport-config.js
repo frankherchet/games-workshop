@@ -22,8 +22,8 @@
     return Object.freeze({
       index,level,stage,world:LEVELS[level],airfieldCount:Math.ceil(stage/3),
       requiredLandings:LANDINGS[stage-1],
-      initialSpawnInterval:Math.max(5.8,13-stage*.48-level*.32),
-      minimumSpawnInterval:Math.max(2.3,6.8-stage*.25-level*.14),
+      initialSpawnInterval:12.5-(stage-1)*.68-level*.15,
+      minimumSpawnInterval:11.92-(stage-1)*.68-level*.15,
       spawnAcceleration:0.025+stage*.002,
       maxAircraft:Math.min(16,7+Math.ceil(stage/2))
     });
