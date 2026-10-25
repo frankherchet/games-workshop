@@ -84,7 +84,7 @@
           c.beginPath();c.roundRect(-48,-12,96,24,3);c.fill();
           c.lineWidth=2;c.strokeStyle=zone.type==='military'?'#aee1a6':'#fff9df';c.strokeRect(-46,-10,92,20);
           c.strokeStyle='#e9f3e8';c.setLineDash([9,8]);c.beginPath();c.moveTo(-37,0);c.lineTo(37,0);c.stroke();
-          c.setLineDash([]);c.font='bold 9px system-ui';c.textAlign='center';c.fillStyle=zone.type==='military'?'#c7f2b1':'#fdf4d4';
+          c.setLineDash([]);c.font='bold 23px system-ui';c.textAlign='center';c.fillStyle=zone.type==='military'?'#c7f2b1':'#fdf4d4';
           c.fillText(zone.type==='military'?'M':'C',0,-18);
         }
         c.restore();
@@ -137,9 +137,11 @@
         c.strokeStyle='rgba(255,255,255,'+(1-p)+')';c.lineWidth=4;c.beginPath();
         c.arc(q.x,q.y,10+p*40,0,TAU);c.stroke();
       }
-      c.save();c.fillStyle='#24444b94';c.beginPath();c.roundRect(16,C.HEIGHT-40,322,26,8);c.fill();
-      c.font='600 13px system-ui';c.fillStyle='#fff';
-      c.fillText('Flugzeug antippen und Route zeichnen',27,C.HEIGHT-22);c.restore();
+      if(this.canvas.clientWidth>=600){
+        c.save();c.fillStyle='#24444b94';c.beginPath();c.roundRect(16,C.HEIGHT-40,322,26,8);c.fill();
+        c.font='600 13px system-ui';c.fillStyle='#fff';
+        c.fillText('Flugzeug antippen und Route zeichnen',27,C.HEIGHT-22);c.restore();
+      }
     }
   }
   const TAU=Math.PI*2;
