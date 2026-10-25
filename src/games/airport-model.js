@@ -25,9 +25,9 @@
     constructor(id,x,y,types,orientation){
       this.id=id;this.x=x;this.y=y;this.orientation=orientation;this.size=74;
       this.zones=[];
-      if(types.includes('civil'))this.zones.push(new CivilRunway(x-17,y+6,orientation));
-      if(types.includes('military'))this.zones.push(new MilitaryRunway(x+21,y-22,orientation));
-      if(types.includes('helipad'))this.zones.push(new Helipad(x+43,y+36));
+      if(types.includes('civil'))this.zones.push(new CivilRunway(x-23,y+4,orientation));
+      if(types.includes('military'))this.zones.push(new MilitaryRunway(x+23,y-28,orientation));
+      if(types.includes('helipad'))this.zones.push(new Helipad(x+57,y+45));
     }
   }
   class Aircraft{
@@ -84,7 +84,7 @@
     constructor(instance){
       this.instance=instance;this.rng=randomFrom(instance.seed^0x9e3779b9);
       this.lastSpawnDirection=null;this.nextSpawnAt=1.4;this.elapsed=0;this.serial=0;
-      this.history=[];
+      this.history=[];this.pending=null;
     }
     interval(){
       const cfg=this.instance.config;
@@ -106,25 +106,28 @@
       }
     }
     spawn(active){
-      const types=this.instance.config.world.types;
-      for(let i=0;i<16;i++){
+      // Keep the next candidate stable if the edge is temporarily occupied.
+      // Routes chosen by the player must not change the replay's spawn sequence.
+      if(!this.pending){
         const dir=this.chooseDirection(),pos=this.choosePosition(dir);
-        if(active.some(a=>distance(a,pos)<a.radius+65))continue;
+        const types=this.instance.config.world.types;
         const type=types[Math.floor(this.rng()*types.length)];
-        const Plane=CLASSES[type];
-        const plane=new Plane(++this.serial,pos.x,pos.y,pos.heading);
-        this.lastSpawnDirection=dir;
-        this.history.push({dir,x:pos.x,y:pos.y,type});
-        return plane;
+        this.pending={dir,pos,type};
       }
-      return null;
+      const {dir,pos,type}=this.pending;
+      if(active.some(a=>distance(a,pos)<a.radius+65))return null;
+      this.pending=null;
+      this.lastSpawnDirection=dir;
+      const Plane=CLASSES[type],plane=new Plane(++this.serial,pos.x,pos.y,pos.heading);
+      this.history.push({dir,x:pos.x,y:pos.y,type});
+      return plane;
     }
     tick(dt,active){
       this.elapsed+=dt;this.nextSpawnAt-=dt;
       if(this.nextSpawnAt>0)return null;
       if(active.length>=this.instance.config.maxAircraft){this.nextSpawnAt=1;return null;}
       const plane=this.spawn(active);
-      this.nextSpawnAt=this.interval();
+      this.nextSpawnAt=plane?this.interval():.35;
       return plane;
     }
   }
