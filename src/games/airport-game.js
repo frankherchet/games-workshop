@@ -75,7 +75,7 @@
       if(!progress.canPlay(index))return;
       session=new M.GameSession(C.stageConfig(index));
       screenWorld=Math.floor(index/12);selected=null;draft=[];mode='playing';overlay.hidden=true;
-      status.textContent='Zeichne Flugrouten. Jeder sichere Anflug zählt!';
+      status.textContent='Flugzeug antippen und Route zum passenden Landeplatz zeichnen.';
       last=performance.now();canvas.focus({preventScroll:true});draw();
     }
     function pause(){
@@ -112,7 +112,8 @@
     on(canvas,'pointerdown',e=>{
       if(mode!=='playing')return;
       const point=coordinates(e);
-      const closest=session.aircraft.reduce((best,p)=>M.distance(point,p)<(best?.dist??40)&&M.distance(point,p)<Math.max(30,p.radius+13)?{id:p.id,dist:M.distance(point,p)}:best,null);
+      const touchRadius=Math.max(30,24*C.WIDTH/canvas.getBoundingClientRect().width);
+      const closest=session.aircraft.reduce((best,p)=>M.distance(point,p)<(best?.dist??touchRadius)&&M.distance(point,p)<Math.max(touchRadius,p.radius+13)?{id:p.id,dist:M.distance(point,p)}:best,null);
       if(!closest)return;
       selected=closest.id;draft=[];pointerId=e.pointerId;
       canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});e.preventDefault();
